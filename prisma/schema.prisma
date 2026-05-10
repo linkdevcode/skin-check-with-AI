@@ -1,0 +1,107 @@
+// SkinCheck AI — Vercel Postgres
+// https://www.prisma.io/docs/concepts/database-connectors/postgresql
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Enums ---
+
+enum SkinType {
+  OILY       // Dầu
+  DRY        // Khô
+  COMBINATION // Hỗn hợp
+  SENSITIVE  // Nhạy cảm
+}
+
+/// Sáng / Tối
+enum TimeOfDay {
+  AM
+  PM
+}
+
+// --- Models ---
+
+/// Người dùng — cá nhân hóa phân tích
+model User {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  skinType        SkinType @map("skin_type")
+  /// Ví dụ: "Mụn, lão hóa, thâm nám" (chuỗi tự do hoặc CSV tùy client)
+  skinConcerns    String   @map("skin_concerns")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  routines SkincareRoutine[]
+
+  @@map("users")
+}
+
+/// Thư viện sản phẩm (cache INCI / hoạt chất)
+model Product {
+  id              String @id @default(uuid()) @db.Uuid
+  brandName       String @map("brand_name")
+  productName     String @map("product_name")
+  ingredientsList String @db.Text @map("ingredients_list")
+  isVerified      Boolean @default(false) @map("is_verified")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  routineDetails RoutineDetail[]
+
+  @@index([brandName, productName])
+  @@map("products")
+}
+
+/// Routine gắn với user
+model SkincareRoutine {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  routineName String   @map("routine_name")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  details RoutineDetail[]
+  analyses AnalysisHistory[]
+
+  @@index([userId])
+  @@map("skincare_routines")
+}
+
+/// Từng bước trong routine: sản phẩm, buổi, thứ tự layering
+model RoutineDetail {
+  id          String     @id @default(uuid()) @db.Uuid
+  routineId   String     @map("routine_id") @db.Uuid
+  productId   String?    @map("product_id") @db.Uuid
+  timeOfDay   TimeOfDay  @map("time_of_day")
+  orderIndex  Int        @map("order_index")
+
+  routine SkincareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([routineId, timeOfDay, orderIndex])
+  @@map("routine_details")
+}
+
+/// Lịch sử chấm điểm AI — tránh gọi lại token
+model AnalysisHistory {
+  id                 String   @id @default(uuid()) @db.Uuid
+  routineId          String   @map("routine_id") @db.Uuid
+  overallScore       Int      @map("overall_score") // 0–100 (validate ở app)
+  /// JSON: ví dụ [{"pair":"Retinol-AHA","level":"high"}]
+  conflicts          Json     @default("[]")
+  aiRecommendations  String   @db.Text @map("ai_recommendations")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  routine SkincareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@index([routineId, createdAt])
+  @@map("analysis_history")
+}

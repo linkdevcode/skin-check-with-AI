@@ -1,0 +1,32 @@
+# SkinCheck AI Project Rules
+
+## Tech Stack
+- Framework: Next.js 14+ (App Router)
+- Language: TypeScript
+- Styling: Tailwind CSS, Lucide React (Icons)
+- UI Components: ShadcnUI
+- Database: Vercel Postgres (Prisma ORM)
+- AI: Google Gemini 2.5 Flash for multimodal (image scanning) or complex reasoning
+
+## Coding Principles
+- **Mobile-First**: Luôn ưu tiên giao diện Web Mobile, tối ưu cho màn hình dọc và cử chỉ vuốt chạm.
+- **Micro-SaaS Mindset**: Code sạch, tối giản, tập trung vào tính năng cốt lõi (MVP).
+- **Clean Architecture**: Tách biệt logic phân tích AI (Server Actions) và UI Components.
+- **Tone & Language**: Giao diện tiếng Việt chuyên nghiệp nhưng gần gũi.
+
+## Specific Logic
+- Luôn kiểm tra xung đột hoạt chất (Actives Conflict) dựa trên kiến thức dược mỹ phẩm.
+- Khi hiển thị thành phần, ưu tiên hiển thị rõ các hoạt chất chính như: Retinol, BHA, AHA, Vitamin C, Niacinamide, Hyaluronic Acid.
+
+# SkinCheck AI Project Rules (Free Tier Edition)
+## AI Strategy
+- Engine: Google Gemini 2.5 Flash for multimodal (image scanning) or complex reasoning.
+- Rate Limit Handling: Implement retry logic with exponential backoff to stay within free tier limits.
+
+## Database & Storage
+- Provider: Vercel Postgres (Hobby Tier).
+- Data Retention: Clean up old analysis history after 30 days to stay under the 256MB free limit.
+
+## Optimization
+- Cache responses in Redis (Upstash Free Tier) for common products to save AI tokens.
+- Use Edge Runtime in Next.js for faster global response times.
