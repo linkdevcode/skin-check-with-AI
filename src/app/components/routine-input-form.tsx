@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Sparkles, Loader2, AlertCircle, ListChecks } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  AlertCircle,
+  Droplets,
+  Sun,
+  Layers2,
+  Shield,
+  type LucideIcon,
+} from "lucide-react";
 import {
   RoutineProductLists,
   rowsFromStrings,
@@ -19,12 +28,56 @@ import { saveRoutineResult } from "@/lib/routine-result-storage";
 import type { SkinTypeInput } from "@/types/routine-analysis";
 import { cn } from "@/lib/utils";
 
-const SKIN_OPTIONS: { id: SkinTypeInput; label: string }[] = [
-  { id: "OILY", label: "Dầu" },
-  { id: "DRY", label: "Khô" },
-  { id: "COMBINATION", label: "Hỗn hợp" },
-  { id: "SENSITIVE", label: "Nhạy cảm" },
+const SKIN_OPTIONS: { id: SkinTypeInput; label: string; Icon: LucideIcon }[] = [
+  { id: "OILY", label: "Dầu", Icon: Droplets },
+  { id: "DRY", label: "Khô", Icon: Sun },
+  { id: "COMBINATION", label: "Hỗn hợp", Icon: Layers2 },
+  { id: "SENSITIVE", label: "Nhạy cảm", Icon: Shield },
 ];
+
+/** Tabs sáng/tối — chỉ hiển thị dưới 640px */
+function RoutineAmPmTabs({
+  active,
+  onChange,
+  disabled,
+}: {
+  active: "am" | "pm";
+  onChange: (t: "am" | "pm") => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      className="mb-3 flex gap-1 rounded-2xl border border-slate-200/90 bg-slate-100/80 p-1 dark:border-zinc-700 dark:bg-zinc-900/60 sm:hidden"
+      role="tablist"
+      aria-label="Chọn buổi sáng hoặc tối"
+    >
+      {(
+        [
+          { id: "am" as const, label: "Buổi sáng (AM)" },
+          { id: "pm" as const, label: "Buổi tối (PM)" },
+        ] as const
+      ).map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          role="tab"
+          aria-selected={active === t.id}
+          disabled={disabled}
+          onClick={() => onChange(t.id)}
+          className={cn(
+            "min-h-11 flex-1 rounded-xl px-3 py-2.5 text-center text-sm font-semibold transition",
+            active === t.id
+              ? "bg-white text-teal-800 shadow-sm shadow-teal-900/10 ring-1 ring-teal-500/35 dark:bg-[#1a222c] dark:text-teal-100 dark:ring-teal-500/40"
+              : "text-slate-600 hover:bg-white/60 dark:text-zinc-400 dark:hover:bg-zinc-800/80",
+            "disabled:opacity-50",
+          )}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function RoutineInputForm() {
   const router = useRouter();
@@ -32,6 +85,7 @@ export function RoutineInputForm() {
 
   const [amText, setAmText] = useState("");
   const [pmText, setPmText] = useState("");
+  const [mobileRoutineTab, setMobileRoutineTab] = useState<"am" | "pm">("am");
 
   const [morningRows, setMorningRows] = useState<ProductRow[]>([]);
   const [eveningRows, setEveningRows] = useState<ProductRow[]>([]);
@@ -128,11 +182,14 @@ export function RoutineInputForm() {
     }
   }, [reviewed, morningRows, eveningRows, skinType, status, router]);
 
+  // Plus Jakarta Sans (body) + monospace chỉ khi cần — dùng sans cho toàn form
   const taClass = cn(
-    "min-h-[140px] w-full resize-y rounded-xl border px-3 py-3 font-[family-name:var(--font-mono)] text-sm leading-relaxed",
+    "min-h-[140px] w-full resize-y rounded-xl border px-3 py-3 font-sans text-sm leading-relaxed",
     "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400",
-    "shadow-inner outline-none transition-shadow",
-    "focus:border-teal-500/55 focus:ring-2 focus:ring-teal-500/25",
+    "shadow-inner outline-none transition-[border-color,box-shadow] duration-200",
+    "focus:border-teal-500 dark:focus:border-teal-400",
+    "focus:shadow-[0_0_0_3px_rgba(45,212,191,0.22),0_10px_28px_-10px_rgba(13,148,136,0.38)]",
+    "dark:focus:shadow-[0_0_0_3px_rgba(45,212,191,0.18),0_12px_32px_-12px_rgba(34,211,172,0.25)]",
     "dark:border-slate-700 dark:bg-[#141820] dark:text-slate-100 dark:placeholder:text-slate-600",
     "disabled:cursor-not-allowed disabled:opacity-60",
   );
@@ -143,7 +200,7 @@ export function RoutineInputForm() {
 
       <div
         className={cn(
-          "min-h-[calc(100svh-3.5rem)] bg-slate-50 pb-[max(1.25rem,env(safe-area-inset-bottom))]",
+          "font-sans min-h-[calc(100svh-3rem)] bg-slate-50 pb-[max(1.25rem,env(safe-area-inset-bottom))]",
           "pt-[max(0.35rem,env(safe-area-inset-top))] dark:bg-[#0b0e14]",
         )}
       >
@@ -151,7 +208,7 @@ export function RoutineInputForm() {
           <PageBackBar href="/">Về trang chủ</PageBackBar>
 
           <section
-            className="space-y-5 pt-1 scroll-mt-20 sm:scroll-mt-24"
+            className="space-y-5 pt-1 scroll-mt-16 sm:scroll-mt-20"
             aria-labelledby="routine-main-title"
           >
             <header className="mb-1">
@@ -176,12 +233,13 @@ export function RoutineInputForm() {
                 Loại da của bạn
               </p>
               <div
-                className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:max-w-3xl"
+                className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:max-w-3xl"
                 role="group"
                 aria-labelledby="skin-type-label"
               >
                 {SKIN_OPTIONS.map((opt) => {
                   const selected = skinType === opt.id;
+                  const Icon = opt.Icon;
                   return (
                     <button
                       key={opt.id}
@@ -189,14 +247,27 @@ export function RoutineInputForm() {
                       onClick={() => setSkinType(opt.id)}
                       disabled={busy}
                       className={cn(
-                        "min-h-12 rounded-xl border px-2 text-sm font-semibold transition sm:px-3",
-                        selected
-                          ? "border-teal-500 bg-teal-50 text-teal-900 ring-1 ring-teal-500/35 dark:border-teal-500/70 dark:bg-teal-950/50 dark:text-teal-100 dark:ring-teal-500/40"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-zinc-800 dark:bg-[#1a1f26]/80 dark:text-zinc-300 dark:hover:border-zinc-600",
+                        "relative min-h-[3.35rem] overflow-hidden rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition",
                         "disabled:opacity-50",
+                        selected
+                          ? [
+                              "border-teal-400 bg-teal-50/95 text-teal-900",
+                              "shadow-[0_0_22px_-5px_rgba(34,211,172,0.65)] ring-2 ring-teal-400/90",
+                              "dark:border-teal-400/70 dark:bg-teal-950/50 dark:text-teal-50",
+                              "dark:shadow-[0_0_28px_-6px_rgba(34,211,172,0.45)] dark:ring-teal-400/60",
+                            ]
+                          : [
+                              "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
+                              "dark:border-zinc-800 dark:bg-[#1a1f26]/80 dark:text-zinc-300 dark:hover:border-zinc-600",
+                            ],
                       )}
                     >
-                      {opt.label}
+                      <Icon
+                        className="pointer-events-none absolute -bottom-2 -right-2 h-16 w-16 text-teal-600/15 dark:text-teal-400/15"
+                        strokeWidth={1.25}
+                        aria-hidden
+                      />
+                      <span className="relative z-10">{opt.label}</span>
                     </button>
                   );
                 })}
@@ -208,9 +279,23 @@ export function RoutineInputForm() {
                 Routine của bạn
               </span>
 
-              <div className="grid gap-4 lg:grid-cols-2 lg:gap-6 lg:items-start">
-                <div className="min-w-0">
-                  <label htmlFor="routine-am" className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-zinc-500">
+              <RoutineAmPmTabs
+                active={mobileRoutineTab}
+                onChange={setMobileRoutineTab}
+                disabled={busy}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:items-start">
+                <div
+                  className={cn(
+                    "min-w-0",
+                    mobileRoutineTab !== "am" && "max-sm:hidden",
+                  )}
+                >
+                  <label
+                    htmlFor="routine-am"
+                    className="mb-1.5 hidden text-xs font-medium text-slate-500 sm:block dark:text-zinc-500"
+                  >
                     Buổi sáng (AM)
                   </label>
                   <textarea
@@ -221,13 +306,21 @@ export function RoutineInputForm() {
                     placeholder={`Ví dụ:
 sữa rửa → Vitamin C → kem dưỡng → kem chống nắng`}
                     rows={5}
-                    className={cn(taClass, "min-h-[132px] lg:min-h-[168px]")}
+                    className={cn(taClass, "min-h-[160px] sm:min-h-[132px] lg:min-h-[168px]")}
                     autoComplete="off"
                     spellCheck={false}
                   />
                 </div>
-                <div className="min-w-0">
-                  <label htmlFor="routine-pm" className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-zinc-500">
+                <div
+                  className={cn(
+                    "min-w-0",
+                    mobileRoutineTab !== "pm" && "max-sm:hidden",
+                  )}
+                >
+                  <label
+                    htmlFor="routine-pm"
+                    className="mb-1.5 hidden text-xs font-medium text-slate-500 sm:block dark:text-zinc-500"
+                  >
                     Buổi tối (PM)
                   </label>
                   <textarea
@@ -238,7 +331,7 @@ sữa rửa → Vitamin C → kem dưỡng → kem chống nắng`}
                     placeholder={`Ví dụ:
 tẩy trang → BHA → Retinol → kem dưỡng`}
                     rows={5}
-                    className={cn(taClass, "min-h-[132px] lg:min-h-[168px]")}
+                    className={cn(taClass, "min-h-[160px] sm:min-h-[132px] lg:min-h-[168px]")}
                     autoComplete="off"
                     spellCheck={false}
                   />
@@ -250,16 +343,19 @@ tẩy trang → BHA → Retinol → kem dưỡng`}
                 onClick={() => void runReview()}
                 disabled={busy || !rawHasContent}
                 className={cn(
-                  "flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition",
-                  "border-slate-200 bg-white text-slate-800 hover:border-teal-400/60 hover:bg-slate-50",
-                  "dark:border-zinc-700 dark:bg-[#1a1f26] dark:text-zinc-100 dark:hover:border-teal-600/40 dark:hover:bg-[#1f2630]",
-                  "disabled:cursor-not-allowed disabled:opacity-40",
+                  "flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold",
+                  "bg-gradient-to-r from-teal-500 via-teal-500 to-cyan-500 text-white",
+                  "shadow-md shadow-teal-900/20 transition duration-200",
+                  "hover:scale-105 hover:shadow-lg hover:shadow-teal-500/35",
+                  "active:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40",
+                  "disabled:hover:scale-100 disabled:hover:shadow-md",
+                  "dark:shadow-black/40 dark:hover:shadow-teal-500/25",
                 )}
               >
                 {reviewing ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-teal-600 dark:text-teal-400" aria-hidden />
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
                 ) : (
-                  <ListChecks className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden />
+                  <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
                 )}
                 Rà soát — tách sản phẩm bằng AI
               </button>

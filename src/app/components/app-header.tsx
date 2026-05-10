@@ -8,9 +8,9 @@ export async function AppHeader() {
   const session = await auth();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/90 bg-white/90 backdrop-blur-md dark:border-zinc-800/80 dark:bg-[#0b0e14]/92">
-      <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 sm:max-w-xl lg:max-w-3xl lg:px-8">
-        <HomeLogoLink className="text-sm font-semibold text-slate-900 dark:text-white">
+    <header className="sticky top-0 z-40 border-b border-white/20 bg-white/65 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] backdrop-blur-xl dark:border-zinc-700/40 dark:bg-[#0b0e14]/55 dark:shadow-[0_1px_0_0_rgba(0,0,0,0.4)] supports-[backdrop-filter]:bg-white/55 supports-[backdrop-filter]:dark:bg-[#0b0e14]/50">
+      <div className="mx-auto flex max-w-lg items-center justify-between gap-2 px-3 py-2 sm:max-w-xl sm:gap-3 sm:px-4 sm:py-2.5 lg:max-w-3xl lg:px-8">
+        <HomeLogoLink className="text-sm font-semibold leading-tight text-slate-900 dark:text-white">
           SkinCheck AI
         </HomeLogoLink>
         <div className="flex items-center gap-2 sm:gap-3">
