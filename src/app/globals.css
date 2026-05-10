@@ -1,1 +1,139 @@
 @import "tailwindcss";
+
+/* Cho next-themes: dùng class `.dark` trên <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-background: #09090b;
+  --color-surface: #18181b;
+  --color-surface-elevated: #27272a;
+  --color-border-subtle: #3f3f46;
+  --color-accent: #2dd4bf;
+  --color-accent-muted: #14b8a6;
+}
+
+/* Loading overlay — chấm xoay (PDF) */
+@keyframes sk-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.sk-dot {
+  animation: sk-dot 1.2s ease-in-out infinite;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+/* Markdown trong khối lời khuyên AI */
+.ai-markdown {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: #475569;
+}
+
+.dark .ai-markdown {
+  color: #e4e4e7;
+}
+
+.ai-markdown h1,
+.ai-markdown h2,
+.ai-markdown h3 {
+  font-weight: 600;
+  color: #0f172a;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.dark .ai-markdown h1,
+.dark .ai-markdown h2,
+.dark .ai-markdown h3 {
+  color: #fafafa;
+}
+
+.ai-markdown h1 {
+  font-size: 1.125rem;
+}
+
+.ai-markdown h2 {
+  font-size: 1.0625rem;
+}
+
+.ai-markdown h3 {
+  font-size: 1rem;
+}
+
+.ai-markdown h1:first-child,
+.ai-markdown h2:first-child,
+.ai-markdown h3:first-child {
+  margin-top: 0;
+}
+
+.ai-markdown p {
+  margin-bottom: 0.75rem;
+}
+
+.ai-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-markdown ul,
+.ai-markdown ol {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.ai-markdown li {
+  margin-bottom: 0.35rem;
+}
+
+.ai-markdown strong {
+  color: #0d9488;
+  font-weight: 600;
+}
+
+.dark .ai-markdown strong {
+  color: #5eead4;
+}
+
+.ai-markdown a {
+  color: #0d9488;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dark .ai-markdown a {
+  color: #6ee7b7;
+}
+
+.ai-markdown code {
+  font-size: 0.875em;
+  background: #f1f5f9;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+}
+
+.dark .ai-markdown code {
+  background: #27272a;
+}
+
+.ai-markdown blockquote {
+  border-left: 3px solid #cbd5e1;
+  margin: 0.75rem 0;
+  padding-left: 0.75rem;
+  color: #64748b;
+}
+
+.dark .ai-markdown blockquote {
+  border-left-color: #3f3f46;
+  color: #a1a1aa;
+}

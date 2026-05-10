@@ -27,9 +27,14 @@ enum TimeOfDay {
 
 // --- Models ---
 
-/// Người dùng — cá nhân hóa phân tích
+/// Người dùng — cá nhân hóa phân tích + đăng nhập email
 model User {
   id              String   @id @default(uuid()) @db.Uuid
+  /// Email đăng nhập (chuẩn hóa lowercase), null = legacy / tài khoản cũ không auth
+  email           String?  @unique @map("email")
+  passwordHash    String?  @map("password_hash")
+  resetToken      String?  @map("reset_token")
+  resetTokenExpiry DateTime? @map("reset_token_expiry")
   name            String
   skinType        SkinType @map("skin_type")
   /// Ví dụ: "Mụn, lão hóa, thâm nám" (chuỗi tự do hoặc CSV tùy client)
@@ -39,6 +44,7 @@ model User {
 
   routines SkincareRoutine[]
 
+  @@index([resetToken])
   @@map("users")
 }
 
