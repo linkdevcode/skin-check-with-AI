@@ -1,30 +1,33 @@
 "use server";
 
-import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
+import { resolveSkinActorUserId } from "@/lib/skin-actor";
 import { prisma } from "@/lib/prisma";
 import { assertAllowedSkinImageUrl } from "@/lib/skin-blob-url";
 import {
-  analyzeFaceForRoutineBudget,
+  analyzeFaceForRoutineBudgetTriple,
   generateRoutineForBudget,
   generateRoutineThreeTiers,
   GeminiAnalysisError,
 } from "@/lib/gemini";
 import type { FaceRoutineAnalysis, SavedRoutineGenResult } from "@/types/face-routine-budget";
 import { Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
 
 export type AnalyzeFaceRoutineResult =
   | { ok: true; data: FaceRoutineAnalysis }
   | { ok: false; error: string; code?: string };
 
-export async function analyzeFaceRoutineAction(imageUrl: string): Promise<AnalyzeFaceRoutineResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { ok: false, error: "Vui lòng đăng nhập." };
-  }
+export async function analyzeFaceRoutineAction(
+  imageUrlFront: string,
+  imageUrlLeft: string,
+  imageUrlRight: string,
+): Promise<AnalyzeFaceRoutineResult> {
+  await resolveSkinActorUserId();
   try {
-    assertAllowedSkinImageUrl(imageUrl);
-    const data = await analyzeFaceForRoutineBudget(imageUrl);
+    for (const u of [imageUrlFront, imageUrlLeft, imageUrlRight]) {
+      assertAllowedSkinImageUrl(u);
+    }
+    const data = await analyzeFaceForRoutineBudgetTriple(imageUrlFront, imageUrlLeft, imageUrlRight);
     return { ok: true, data };
   } catch (e) {
     if (e instanceof GeminiAnalysisError) {
@@ -38,7 +41,9 @@ export async function analyzeFaceRoutineAction(imageUrl: string): Promise<Analyz
 }
 
 export type GenerateRoutineSaveInput = {
-  imageUrl: string;
+  imageUrlFront: string;
+  imageUrlLeft: string;
+  imageUrlRight: string;
   faceAnalysis: FaceRoutineAnalysis;
   mode: "BUDGET" | "AUTO";
   budgetVnd?: number | null;
@@ -54,12 +59,11 @@ const MAX_BUDGET = 35_000_000;
 export async function generateAndSaveRoutineAction(
   input: GenerateRoutineSaveInput,
 ): Promise<GenerateRoutineSaveResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { ok: false, error: "Vui lòng đăng nhập." };
-  }
+  const { userId } = await resolveSkinActorUserId();
   try {
-    assertAllowedSkinImageUrl(input.imageUrl);
+    for (const u of [input.imageUrlFront, input.imageUrlLeft, input.imageUrlRight]) {
+      assertAllowedSkinImageUrl(u);
+    }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "URL ảnh không hợp lệ." };
   }
@@ -96,8 +100,10 @@ export async function generateAndSaveRoutineAction(
 
   const row = await prisma.recommendedRoutine.create({
     data: {
-      userId: session.user.id,
-      imageUrl: input.imageUrl,
+      userId,
+      imageUrlFront: input.imageUrlFront,
+      imageUrlLeft: input.imageUrlLeft,
+      imageUrlRight: input.imageUrlRight,
       faceAnalysis: input.faceAnalysis as unknown as Prisma.InputJsonValue,
       routineResult: routine as unknown as Prisma.InputJsonValue,
       mode: input.mode,
@@ -105,6 +111,7 @@ export async function generateAndSaveRoutineAction(
     },
   });
 
+  revalidatePath("/routine-ngan-sach");
   revalidatePath("/routine-ngan-sach/lich-su");
   revalidatePath(`/routine-ngan-sach/${row.id}`);
 

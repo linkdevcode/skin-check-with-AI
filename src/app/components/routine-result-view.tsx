@@ -36,12 +36,6 @@ export function RoutineResultView({
             <strong className="text-slate-900 dark:text-white">không được lưu</strong>; tải lại trang sẽ mất. Đăng nhập
             để lưu lần sau và xem trong mục Lịch sử.
           </p>
-          <Link
-            href="/dang-nhap"
-            className="inline-flex min-h-12 items-center justify-center rounded-xl bg-teal-600 px-4 text-center font-semibold text-white hover:bg-teal-500"
-          >
-            Đăng nhập
-          </Link>
         </div>
       ) : null}
 

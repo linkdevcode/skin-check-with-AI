@@ -2,6 +2,7 @@
 
 import { put } from "@vercel/blob";
 import { auth } from "@/auth";
+import { resolveSkinActorUserId } from "@/lib/skin-actor";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
@@ -15,9 +16,19 @@ export type UploadSkinImageResult =
  * Cần `BLOB_READ_WRITE_TOKEN` trên Vercel / .env.local.
  */
 export async function uploadSkinImageAction(formData: FormData): Promise<UploadSkinImageResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { ok: false, error: "Vui lòng đăng nhập để tải ảnh lên." };
+  const scopeRaw = String(formData.get("scope") ?? "skin-diary").trim();
+  const prefix = scopeRaw === "face-scan" ? "face-scan" : "skin-diary";
+
+  let userId: string;
+  if (prefix === "skin-diary") {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { ok: false, error: "Vui lòng đăng nhập để tải ảnh nhật ký da." };
+    }
+    userId = session.user.id;
+  } else {
+    const actor = await resolveSkinActorUserId();
+    userId = actor.userId;
   }
 
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
@@ -39,9 +50,7 @@ export async function uploadSkinImageAction(formData: FormData): Promise<UploadS
   }
 
   const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
-  const scopeRaw = String(formData.get("scope") ?? "skin-diary").trim();
-  const prefix = scopeRaw === "face-scan" ? "face-scan" : "skin-diary";
-  const path = `${prefix}/${session.user.id}/${Date.now()}.${ext}`;
+  const path = `${prefix}/${userId}/${Date.now()}.${ext}`;
 
   try {
     const blob = await put(path, file, {

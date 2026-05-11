@@ -3,13 +3,12 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Camera, Loader2 } from "lucide-react";
-import { uploadSkinImageAction } from "@/actions/upload-skin-image";
+import { Loader2 } from "lucide-react";
+import { MultiAngleFaceFlow } from "@/app/components/multi-angle-face-flow";
 import { createSkinDiaryEntryAction } from "@/actions/skin-diary";
 import type { SkinEntryListItem } from "@/types/skin-diary";
 import { aggregateWeeklyImprovement } from "@/lib/skin-diary-chart";
 import { SkinImprovementChart } from "@/app/components/skin-improvement-chart";
-import { cn } from "@/lib/utils";
 
 function dayGroupKey(iso: string): string {
   const d = new Date(iso);
@@ -28,10 +27,11 @@ type Props = {
 export function SkinDiaryView({ initialEntries }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [note, setNote] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [flowKey, setFlowKey] = useState(0);
+  const diarySubmitLock = useRef(false);
 
   const chartData = useMemo(
     () =>
@@ -55,45 +55,15 @@ export function SkinDiaryView({ initialEntries }: Props) {
     return Array.from(map.entries());
   }, [initialEntries]);
 
-  const onPickFile = () => fileRef.current?.click();
-
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setMsg(null);
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const up = await uploadSkinImageAction(fd);
-      if (!up.ok) {
-        setMsg(up.error);
-        return;
-      }
-      startTransition(async () => {
-        const cr = await createSkinDiaryEntryAction({
-          imageUrl: up.url,
-          userNote: note.trim() || null,
-        });
-        if (!cr.ok) {
-          setMsg(cr.error);
-          return;
-        }
-        setNote("");
-        router.refresh();
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
+  const busy = submitting || pending;
 
   return (
     <div className="space-y-8 pb-10">
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Thêm ảnh mới</h2>
         <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
-          Ảnh JPEG/PNG/WebP, tối đa 8MB. Ảnh mới sẽ được so với ảnh gần nhất (AI Vision).
+          Ảnh mặt trước là bắt buộc; thêm góc trái &amp; phải nếu muốn (AI sẽ xử lý lâu hơn). So sánh với ảnh gần nhất
+          (Gemini Vision).
         </p>
         <label className="mt-3 block text-xs font-medium text-slate-600 dark:text-zinc-400">
           Ghi chú (tuỳ chọn)
@@ -103,27 +73,58 @@ export function SkinDiaryView({ initialEntries }: Props) {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Ví dụ: sau tuần dùng BHA…"
+          disabled={busy}
           className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-white"
         />
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onFileChange} />
-        <button
-          type="button"
-          onClick={onPickFile}
-          disabled={uploading || pending}
-          className={cn(
-            "mt-4 flex w-full min-h-12 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white transition hover:bg-teal-500",
-            "disabled:opacity-50",
-          )}
-        >
-          {uploading || pending ? (
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-          ) : (
-            <Camera className="h-5 w-5" aria-hidden />
-          )}
-          Chụp hoặc chọn ảnh, lưu nhật ký
-        </button>
+        <div className="relative mt-4">
+          {busy ? (
+            <div
+              className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl bg-white/80 backdrop-blur-sm dark:bg-[#0b0e14]/75"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2 className="h-8 w-8 animate-spin text-teal-600 dark:text-teal-400" aria-hidden />
+              <p className="px-4 text-center text-xs font-medium text-slate-700 dark:text-zinc-200">Đang phân tích…</p>
+            </div>
+          ) : null}
+          <MultiAngleFaceFlow
+            key={flowKey}
+            minAngles={1}
+            scope="skin-diary"
+            disabled={busy}
+            onComplete={(tri) => {
+              if (diarySubmitLock.current) return;
+              diarySubmitLock.current = true;
+              setMsg(null);
+              setSubmitting(true);
+              startTransition(async () => {
+                try {
+                  const cr = await createSkinDiaryEntryAction({
+                    imageUrlFront: tri.front,
+                    imageUrlLeft: tri.left ?? null,
+                    imageUrlRight: tri.right ?? null,
+                    userNote: note.trim() || null,
+                  });
+                  if (!cr.ok) {
+                    setMsg(cr.error);
+                    return;
+                  }
+                  setNote("");
+                  setFlowKey((k) => k + 1);
+                  router.refresh();
+                } finally {
+                  setSubmitting(false);
+                  diarySubmitLock.current = false;
+                }
+              });
+            }}
+          />
+        </div>
         {msg ? (
-          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100" role="alert">
+          <p
+            className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"
+            role="alert"
+          >
             {msg}
           </p>
         ) : null}
@@ -151,17 +152,26 @@ export function SkinDiaryView({ initialEntries }: Props) {
                 </p>
                 <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4" role="list">
                   {items.map((it) => (
-                    <li key={it.id} className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-zinc-800 dark:bg-zinc-900/60">
+                    <li
+                      key={it.id}
+                      className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-zinc-800 dark:bg-zinc-900/60"
+                    >
                       <Link href={`/nhat-ky-da/${it.id}`} className="block aspect-square">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={it.imageUrl}
+                          src={it.imageUrlFront}
                           alt=""
                           className="h-full w-full object-cover transition group-hover:opacity-95"
                           loading="lazy"
                         />
                       </Link>
-                      {it.analysisResult.comparedWithEntryId ? (
+                      {it.imageUrlLeft && it.imageUrlRight ? (
+                        <span className="absolute left-1 top-1 rounded bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white backdrop-blur-sm">
+                          3 góc
+                        </span>
+                      ) : null}
+                      {it.analysisResult.comparedWithEntryId &&
+                      it.analysisResult.comparedWithEntryId !== it.id ? (
                         <Link
                           href={`/nhat-ky-da/so-sanh?before=${it.analysisResult.comparedWithEntryId}&after=${it.id}`}
                           className="absolute bottom-1 right-1 rounded-md bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"

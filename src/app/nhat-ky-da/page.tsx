@@ -24,7 +24,9 @@ export default async function NhatKyDaPage() {
     take: 120,
     select: {
       id: true,
-      imageUrl: true,
+      imageUrlFront: true,
+      imageUrlLeft: true,
+      imageUrlRight: true,
       userNote: true,
       createdAt: true,
       analysisResult: true,
@@ -33,7 +35,9 @@ export default async function NhatKyDaPage() {
 
   const initialEntries: SkinEntryListItem[] = rows.map((r) => ({
     id: r.id,
-    imageUrl: r.imageUrl,
+    imageUrlFront: r.imageUrlFront,
+    imageUrlLeft: r.imageUrlLeft,
+    imageUrlRight: r.imageUrlRight,
     userNote: r.userNote,
     createdAt: r.createdAt.toISOString(),
     analysisResult: r.analysisResult as SkinDiaryAnalysisJson,

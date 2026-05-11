@@ -714,28 +714,108 @@ async function runVisionJson(
 
 /**
  * Phân tích một ảnh da (mục nhật ký đầu tiên hoặc không so sánh).
+ * @deprecated Dùng analyzeSkinPortraitAngles — giữ để tương thích gọi 1 URL.
  */
 export async function analyzeSkinPortrait(imageUrl: string): Promise<SkinDiaryAnalysisJson> {
-  const part = await fetchImageInlinePart(imageUrl);
-  const prompt = `Phân tích ảnh selfie vùng da mặt. Ước lượng: số tổn thương giống mụn, mức đỏ da, mức thâm/sắc tố tương đối. Trả về JSON đúng schema.`;
-  const raw = await runVisionJson([prompt, part], SKIN_PORTRAIT_SCHEMA, 0.25);
-  return parseSkinPortraitJson(raw);
+  return analyzeSkinPortraitAngles(imageUrl, null, null);
 }
 
 /**
- * So sánh hai ảnh (cũ → mới): chỉ số định lượng % cải thiện và lời khuyên.
+ * Nhật ký: 1 ảnh mặt trước bắt buộc; góc trái/phải (theo người trong ảnh) tuỳ chọn.
+ */
+export async function analyzeSkinPortraitAngles(
+  imageUrlFront: string,
+  imageUrlLeft?: string | null,
+  imageUrlRight?: string | null,
+): Promise<SkinDiaryAnalysisJson> {
+  assertAllowedSkinImageUrl(imageUrlFront);
+  const left = imageUrlLeft?.trim() || null;
+  const right = imageUrlRight?.trim() || null;
+  if (left) assertAllowedSkinImageUrl(left);
+  if (right) assertAllowedSkinImageUrl(right);
+
+  const partFront = await fetchImageInlinePart(imageUrlFront);
+  const partLeft = left ? await fetchImageInlinePart(left) : null;
+  const partRight = right ? await fetchImageInlinePart(right) : null;
+
+  let prompt: string;
+  if (!partLeft && !partRight) {
+    prompt = `Phân tích một ảnh selfie MẶT TRƯỚC (nhìn thẳng camera), vùng da mặt. Ước lượng: số tổn thương giống mụn, mức đỏ da, mức thâm/sắc tố tương đối. Trả về JSON đúng schema.`;
+  } else if (partLeft && partRight) {
+    prompt = `Phân tích BA ảnh cùng một buổi, cùng một người. Thứ tự ảnh sau prompt này:
+(1) MẶT TRƯỚC — nhìn thẳng camera.
+(2) GÓC TRÁI — quay mặt ~45° để lộ má TRÁI của người trong ảnh (từ góc nhìn của họ: bên trái khuôn mặt).
+(3) GÓC PHẢI — tương tự, má PHẢI của người trong ảnh.
+Tổng hợp cả ba góc để ước lượng mụn, đỏ, thâm, lỗ chân lông chính xác hơn một góc. Trả về JSON đúng schema.`;
+  } else if (partLeft) {
+    prompt = `Phân tích HAI ảnh: (1) mặt TRƯỚC (2) góc TRÁI (má trái người trong ảnh). Tổng hợp cả hai. Trả về JSON đúng schema.`;
+  } else {
+    prompt = `Phân tích HAI ảnh: (1) mặt TRƯỚC (2) góc PHẢI (má phải người trong ảnh). Tổng hợp cả hai. Trả về JSON đúng schema.`;
+  }
+
+  const parts: Array<string | { inlineData: { data: string; mimeType: string } }> = [prompt, partFront];
+  if (partLeft) parts.push(partLeft);
+  if (partRight) parts.push(partRight);
+
+  const raw = await runVisionJson(parts, SKIN_PORTRAIT_SCHEMA, 0.25);
+  return parseSkinPortraitJson(raw);
+}
+
+export type SkinAngleSet = {
+  front: string;
+  left?: string | null;
+  right?: string | null;
+};
+
+/**
+ * So sánh hai buổi chụp (TRƯỚC → SAU). Ảnh theo cùng thứ tự: trước, [trái], [phải] — chỉ gửi các góc có URL.
+ */
+export async function compareSkinProgressAngles(
+  oldSet: SkinAngleSet,
+  newSet: SkinAngleSet,
+): Promise<SkinDiaryAnalysisJson> {
+  const blocks: Array<string | { inlineData: { data: string; mimeType: string } }> = [
+    `Bạn là chuyên gia phân tích da liễu qua hình ảnh (giáo dục). So sánh hai buổi chụp: BUỔI TRƯỚC rồi đến BUỔI SAU.
+Quy ước thứ tự ảnh sau đây (mỗi nhãn có thể có 1–3 ảnh tùy dữ liệu):
+- Nhóm BUỔI TRƯỚC: (A1) mặt trước, rồi (A2) góc trái nếu có, rồi (A3) góc phải nếu có.
+- Nhóm BUỔI SAU: (B1) mặt trước, rồi (B2) góc trái nếu có, rồi (B3) góc phải nếu có.
+So sánh tổng thể (ưu tiên cùng góc tương ứng A1 vs B1, v.v.) về: số lượng mụn, thâm/sắc tố, độ đỏ.
+Trả về JSON đúng schema: chỉ số tuyệt đối trên buổi SAU (B) và phần trăm cải thiện so buổi TRƯỚC (A) — số dương nếu tốt hơn.`,
+  ];
+
+  async function appendBuoi(ten: "TRƯỚC" | "SAU", set: SkinAngleSet) {
+    blocks.push(`Buổi ${ten} — mặt trước:`);
+    blocks.push(await fetchImageInlinePart(set.front));
+    if (set.left?.trim()) {
+      assertAllowedSkinImageUrl(set.left);
+      blocks.push(`Buổi ${ten} — góc trái (má trái người trong ảnh):`);
+      blocks.push(await fetchImageInlinePart(set.left));
+    }
+    if (set.right?.trim()) {
+      assertAllowedSkinImageUrl(set.right);
+      blocks.push(`Buổi ${ten} — góc phải (má phải người trong ảnh):`);
+      blocks.push(await fetchImageInlinePart(set.right));
+    }
+  }
+
+  await appendBuoi("TRƯỚC", oldSet);
+  await appendBuoi("SAU", newSet);
+
+  const raw = await runVisionJson(blocks, SKIN_COMPARE_SCHEMA, 0.2);
+  return parseSkinCompareJson(raw);
+}
+
+/**
+ * So sánh hai ảnh (cũ → mới): chỉ mặt trước — tương thích API cũ.
  */
 export async function compareSkinProgress(
   oldImageUrl: string,
   newImageUrl: string,
 ): Promise<SkinDiaryAnalysisJson> {
-  const oldPart = await fetchImageInlinePart(oldImageUrl);
-  const newPart = await fetchImageInlinePart(newImageUrl);
-  const prompt = `Bạn là chuyên gia phân tích da liễu qua hình ảnh. Hãy so sánh hai bức ảnh này (ảnh đầu = TRƯỚC, ảnh sau = SAU) và chỉ ra sự thay đổi cụ thể về: Số lượng mụn, diện tích vết thâm, và độ đỏ của da. Trả về định dạng JSON gồm các chỉ số định lượng (phần trăm cải thiện: số dương nếu tình trạng tốt hơn ảnh trước) và lời khuyên tiếp theo.
-
-Quy ước: Ảnh thứ nhất bạn nhận là TRƯỚC, ảnh thứ hai là SAU. Ghi nhận các chỉ số tuyệt đối trên ảnh SAU và % cải thiện so TRƯỚC.`;
-  const raw = await runVisionJson([prompt, oldPart, newPart], SKIN_COMPARE_SCHEMA, 0.2);
-  return parseSkinCompareJson(raw);
+  return compareSkinProgressAngles(
+    { front: oldImageUrl, left: null, right: null },
+    { front: newImageUrl, left: null, right: null },
+  );
 }
 
 // --- Phân tích da + gợi ý routine theo ngân sách ---
@@ -869,9 +949,13 @@ const THREE_TIER_ROUTINE_SCHEMA: ResponseSchema = {
 
 const FACE_ROUTINE_VISION_PROMPT = `Bạn là chuyên gia chăm sóc da (mỹ phẩm, giáo dục). Chỉ quan sát ảnh khuôn mặt / vùng da, không chẩn đoán bệnh hay kê đơn thuốc.
 Nhiệm vụ:
-- Ước lượng loại da (OILY/DRY/COMBINATION/SENSITIVE).
-- Mô tả mức độ mụn / tổn thương viêm và lỗ chân lông bằng tiếng Việt ngắn gọn.
+- Ước lượng loại da (OILY/DRY/COMBINATION/SENSITIVE) dựa trên TOÀN BỘ ảnh được gửi.
+- Mô tả mức độ mụn / tổn thương viêm và lỗ chân lông bằng tiếng Việt ngắn gọn (tổng hợp các góc).
 - Cho 3 điểm số 0–10: acneScore (mụn), poreVisibilityScore (lỗ chân lông), hydrationScore (độ ẩm / mượt bề mặt).
+Thứ tự ảnh sau prompt này (luôn đủ 3 ảnh cho tính năng phân tích da đầy đủ):
+(1) MẶT TRƯỚC — nhìn thẳng camera.
+(2) GÓC TRÁI — má TRÁI của người trong ảnh (họ quay mặt ~45°).
+(3) GÓC PHẢI — má PHẢI của người trong ảnh.
 Trả về JSON đúng schema.`;
 
 const ROUTINE_BUDGET_SYSTEM = `Bạn là chuyên gia routine skincare tại Việt Nam (drugstore + high street). Gợi ý sản phẩm có bán phổ biến, giá ước lượng VND thực tế.
@@ -1037,12 +1121,23 @@ async function runTextJsonGemini(
 }
 
 /**
- * Bước Vision: loại da, mụn, lỗ chân lông + điểm 0–10 (ẩm / mụn / lỗ chân lông).
+ * Bước Vision (3 góc bắt buộc): loại da, mụn, lỗ chân lông + điểm 0–10.
  */
-export async function analyzeFaceForRoutineBudget(imageUrl: string): Promise<FaceRoutineAnalysis> {
-  const part = await fetchImageInlinePart(imageUrl);
+export async function analyzeFaceForRoutineBudgetTriple(
+  imageUrlFront: string,
+  imageUrlLeft: string,
+  imageUrlRight: string,
+): Promise<FaceRoutineAnalysis> {
+  for (const u of [imageUrlFront, imageUrlLeft, imageUrlRight]) {
+    assertAllowedSkinImageUrl(u);
+  }
+  const [pF, pL, pR] = await Promise.all([
+    fetchImageInlinePart(imageUrlFront),
+    fetchImageInlinePart(imageUrlLeft),
+    fetchImageInlinePart(imageUrlRight),
+  ]);
   const raw = await runVisionJson(
-    [FACE_ROUTINE_VISION_PROMPT, part],
+    [FACE_ROUTINE_VISION_PROMPT, pF, pL, pR],
     FACE_ROUTINE_VISION_SCHEMA,
     0.25,
   );

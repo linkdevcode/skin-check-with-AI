@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -27,6 +28,7 @@ import { formatRoutineForAnalysis } from "@/lib/routine-format";
 import { saveRoutineResult } from "@/lib/routine-result-storage";
 import type { SkinTypeInput } from "@/types/routine-analysis";
 import { cn } from "@/lib/utils";
+import { InteractiveCard, MotionReveal, VibeButton, triggerHaptic } from "@/components/ui";
 
 const SKIN_OPTIONS: { id: SkinTypeInput; label: string; Icon: LucideIcon }[] = [
   { id: "OILY", label: "Dầu", Icon: Droplets },
@@ -57,15 +59,20 @@ function RoutineAmPmTabs({
           { id: "pm" as const, label: "Buổi tối (PM)" },
         ] as const
       ).map((t) => (
-        <button
+        <motion.button
           key={t.id}
           type="button"
           role="tab"
           aria-selected={active === t.id}
           disabled={disabled}
+          whileTap={disabled ? undefined : { scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 480, damping: 22 }}
+          onPointerDown={() => {
+            if (!disabled) triggerHaptic(10);
+          }}
           onClick={() => onChange(t.id)}
           className={cn(
-            "min-h-11 flex-1 rounded-xl px-3 py-2.5 text-center text-sm font-semibold transition",
+            "min-h-11 flex-1 rounded-xl px-3 py-2.5 text-center text-sm font-semibold transition-colors",
             active === t.id
               ? "bg-white text-teal-800 shadow-sm shadow-teal-900/10 ring-1 ring-teal-500/35 dark:bg-[#1a222c] dark:text-teal-100 dark:ring-teal-500/40"
               : "text-slate-600 hover:bg-white/60 dark:text-zinc-400 dark:hover:bg-zinc-800/80",
@@ -73,7 +80,7 @@ function RoutineAmPmTabs({
           )}
         >
           {t.label}
-        </button>
+        </motion.button>
       ))}
     </div>
   );
@@ -211,6 +218,12 @@ export function RoutineInputForm() {
             className="space-y-5 pt-1 scroll-mt-16 sm:scroll-mt-20"
             aria-labelledby="routine-main-title"
           >
+            <div className="mb-5 flex gap-3 rounded-xl border border-amber-200 bg-amber-50/95 px-3 py-3 text-sm text-amber-950 dark:border-amber-900/55 dark:bg-amber-950/40 dark:text-amber-50">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+              <div className="space-y-1.5 leading-snug">
+                <p className="font-semibold">Đăng nhập để lưu kết quả và xem lại trên mọi thiết bị.</p>
+              </div>
+            </div>
             <header className="mb-1">
               <h1
                 id="routine-main-title"
@@ -241,34 +254,21 @@ export function RoutineInputForm() {
                   const selected = skinType === opt.id;
                   const Icon = opt.Icon;
                   return (
-                    <button
+                    <InteractiveCard
                       key={opt.id}
-                      type="button"
-                      onClick={() => setSkinType(opt.id)}
+                      selected={selected}
                       disabled={busy}
-                      className={cn(
-                        "relative min-h-[3.35rem] overflow-hidden rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition",
-                        "disabled:opacity-50",
-                        selected
-                          ? [
-                              "border-teal-400 bg-teal-50/95 text-teal-900",
-                              "shadow-[0_0_22px_-5px_rgba(34,211,172,0.65)] ring-2 ring-teal-400/90",
-                              "dark:border-teal-400/70 dark:bg-teal-950/50 dark:text-teal-50",
-                              "dark:shadow-[0_0_28px_-6px_rgba(34,211,172,0.45)] dark:ring-teal-400/60",
-                            ]
-                          : [
-                              "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
-                              "dark:border-zinc-800 dark:bg-[#1a1f26]/80 dark:text-zinc-300 dark:hover:border-zinc-600",
-                            ],
-                      )}
+                      onClick={() => setSkinType(opt.id)}
+                      decoration={
+                        <Icon
+                          className="pointer-events-none absolute -bottom-2 -right-2 h-16 w-16 text-teal-600/15 dark:text-teal-400/15"
+                          strokeWidth={1.25}
+                          aria-hidden
+                        />
+                      }
                     >
-                      <Icon
-                        className="pointer-events-none absolute -bottom-2 -right-2 h-16 w-16 text-teal-600/15 dark:text-teal-400/15"
-                        strokeWidth={1.25}
-                        aria-hidden
-                      />
-                      <span className="relative z-10">{opt.label}</span>
-                    </button>
+                      {opt.label}
+                    </InteractiveCard>
                   );
                 })}
               </div>
@@ -338,19 +338,10 @@ tẩy trang → BHA → Retinol → kem dưỡng`}
                 </div>
               </div>
 
-              <button
+              <VibeButton
                 type="button"
                 onClick={() => void runReview()}
                 disabled={busy || !rawHasContent}
-                className={cn(
-                  "flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold",
-                  "bg-gradient-to-r from-teal-500 via-teal-500 to-cyan-500 text-white",
-                  "shadow-md shadow-teal-900/20 transition duration-200",
-                  "hover:scale-105 hover:shadow-lg hover:shadow-teal-500/35",
-                  "active:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40",
-                  "disabled:hover:scale-100 disabled:hover:shadow-md",
-                  "dark:shadow-black/40 dark:hover:shadow-teal-500/25",
-                )}
               >
                 {reviewing ? (
                   <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
@@ -358,7 +349,7 @@ tẩy trang → BHA → Retinol → kem dưỡng`}
                   <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
                 )}
                 Rà soát — tách sản phẩm bằng AI
-              </button>
+              </VibeButton>
 
               {reviewError ? (
                 <p
@@ -370,47 +361,43 @@ tẩy trang → BHA → Retinol → kem dưỡng`}
               ) : null}
             </div>
 
-            {reviewed ? (
-              <div className="space-y-3 border-t border-slate-200 pt-5 dark:border-zinc-800/80">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-zinc-500">
-                  Danh sách chỉnh sửa
-                </p>
-                <RoutineProductLists
-                  morningRows={morningRows}
-                  eveningRows={eveningRows}
-                  onMorningChange={setMorningRows}
-                  onEveningChange={setEveningRows}
-                  disabled={busy}
-                />
-                {totalProducts === 0 ? (
-                  <p className="text-sm text-amber-800 dark:text-amber-200/90">Thêm ít nhất một bước để phân tích.</p>
-                ) : null}
+            <MotionReveal
+              show={reviewed}
+              className="space-y-3 border-t border-slate-200 pt-5 dark:border-zinc-800/80"
+            >
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-zinc-500">
+                Danh sách chỉnh sửa
+              </p>
+              <RoutineProductLists
+                morningRows={morningRows}
+                eveningRows={eveningRows}
+                onMorningChange={setMorningRows}
+                onEveningChange={setEveningRows}
+                disabled={busy}
+              />
+              {totalProducts === 0 ? (
+                <p className="text-sm text-amber-800 dark:text-amber-200/90">Thêm ít nhất một bước để phân tích.</p>
+              ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => void analyze()}
-                  disabled={busy || !reviewed || totalProducts === 0}
-                  className={cn(
-                    "flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-semibold transition active:scale-[0.98]",
-                    "bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-900/25",
-                    "hover:from-teal-400 hover:to-cyan-400",
-                    "disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none",
-                  )}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden />
-                      Đang phân tích…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-5 w-5 shrink-0" aria-hidden />
-                      AI phân tích ngay
-                    </>
-                  )}
-                </button>
-              </div>
-            ) : null}
+              <VibeButton
+                type="button"
+                className="min-h-14 text-base shadow-lg shadow-teal-900/25"
+                onClick={() => void analyze()}
+                disabled={busy || !reviewed || totalProducts === 0}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden />
+                    Đang phân tích…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-5 w-5 shrink-0" aria-hidden />
+                    AI phân tích ngay
+                  </>
+                )}
+              </VibeButton>
+            </MotionReveal>
 
             {!reviewed && !error ? (
               <p className="mt-2 text-center text-xs text-slate-500 dark:text-zinc-600">

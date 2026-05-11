@@ -114,14 +114,16 @@ model AnalysisHistory {
   @@map("analysis_history")
 }
 
-/// Nhật ký da — ảnh trên Blob + kết quả phân tích JSON (Vision)
+/// Nhật ký da — ảnh Blob (trước bắt buộc; trái/phải tuỳ chọn) + phân tích JSON (Vision)
 model SkinEntry {
-  id             String   @id @default(cuid())
-  userId         String   @map("user_id") @db.Uuid
-  imageUrl       String   @map("image_url")
-  analysisResult Json     @map("analysis_result")
-  userNote       String?  @map("user_note")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id") @db.Uuid
+  imageUrlFront   String   @map("image_url_front")
+  imageUrlLeft    String?  @map("image_url_left")
+  imageUrlRight   String?  @map("image_url_right")
+  analysisResult  Json     @map("analysis_result")
+  userNote        String?  @map("user_note")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -131,9 +133,11 @@ model SkinEntry {
 
 /// Gợi ý routine theo ngân sách sau phân tích ảnh da (Gemini Vision + text)
 model RecommendedRoutine {
-  id             String   @id @default(cuid())
-  userId         String   @map("user_id") @db.Uuid
-  imageUrl       String   @map("image_url")
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id") @db.Uuid
+  imageUrlFront   String   @map("image_url_front")
+  imageUrlLeft    String   @map("image_url_left")
+  imageUrlRight   String   @map("image_url_right")
   /// JSON: loại da, điểm số, mô tả mụn/lỗ chân lông…
   faceAnalysis   Json     @map("face_analysis")
   /// JSON: gói BUDGET hoặc 3 tầng TIET_KIEM / HIEU_QUA / CAO_CAP

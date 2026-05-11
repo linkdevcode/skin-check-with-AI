@@ -20,6 +20,7 @@ export default async function SkinComparePage({ searchParams }: Props) {
   if (!session?.user?.id) {
     redirect("/dang-nhap?callbackUrl=/nhat-ky-da/so-sanh");
   }
+  const userId = session.user.id;
 
   const { before: beforeId, after: afterId } = await searchParams;
   if (!beforeId || !afterId) {
@@ -28,12 +29,12 @@ export default async function SkinComparePage({ searchParams }: Props) {
 
   const [a, b] = await Promise.all([
     prisma.skinEntry.findFirst({
-      where: { id: beforeId, userId: session.user.id },
-      select: { imageUrl: true, createdAt: true, analysisResult: true },
+      where: { id: beforeId, userId },
+      select: { imageUrlFront: true, createdAt: true, analysisResult: true },
     }),
     prisma.skinEntry.findFirst({
-      where: { id: afterId, userId: session.user.id },
-      select: { imageUrl: true, createdAt: true, analysisResult: true },
+      where: { id: afterId, userId },
+      select: { imageUrlFront: true, createdAt: true, analysisResult: true },
     }),
   ]);
 
@@ -50,7 +51,12 @@ export default async function SkinComparePage({ searchParams }: Props) {
           Trước: {a.createdAt.toLocaleString("vi-VN")} · Sau: {b.createdAt.toLocaleString("vi-VN")}
         </p>
         <div className="mt-6">
-          <SkinCompareSlider beforeUrl={a.imageUrl} afterUrl={b.imageUrl} beforeLabel="Trước" afterLabel="Sau" />
+          <SkinCompareSlider
+            beforeUrl={a.imageUrlFront}
+            afterUrl={b.imageUrlFront}
+            beforeLabel="Trước"
+            afterLabel="Sau"
+          />
         </div>
         {ar.nextAdvice ? (
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-relaxed text-slate-700 dark:border-zinc-800 dark:bg-[#141820]/90 dark:text-zinc-300">

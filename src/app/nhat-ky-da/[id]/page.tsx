@@ -16,14 +16,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function SkinEntryDetailPage({ params }: Props) {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/dang-nhap?callbackUrl=/nhat-ky-da");
+    redirect(`/dang-nhap?callbackUrl=/nhat-ky-da/${(await params).id}`);
   }
   const { id } = await params;
   const row = await prisma.skinEntry.findFirst({
     where: { id, userId: session.user.id },
     select: {
       id: true,
-      imageUrl: true,
+      imageUrlFront: true,
+      imageUrlLeft: true,
+      imageUrlRight: true,
       userNote: true,
       createdAt: true,
       analysisResult: true,
@@ -44,9 +46,23 @@ export default async function SkinEntryDetailPage({ params }: Props) {
         <p className="mt-2 text-xs text-slate-500 dark:text-zinc-500">
           {row.createdAt.toLocaleString("vi-VN")}
         </p>
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/40">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={row.imageUrl} alt="" className="aspect-square w-full object-cover" />
+        <div className="mt-4 space-y-2">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/40">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={row.imageUrlFront} alt="Mặt trước" className="aspect-square w-full object-cover" />
+          </div>
+          {row.imageUrlLeft && row.imageUrlRight ? (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={row.imageUrlLeft} alt="Góc trái" className="aspect-square w-full object-cover" />
+              </div>
+              <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={row.imageUrlRight} alt="Góc phải" className="aspect-square w-full object-cover" />
+              </div>
+            </div>
+          ) : null}
         </div>
         {row.userNote ? (
           <p className="mt-4 text-sm text-slate-700 dark:text-zinc-300">

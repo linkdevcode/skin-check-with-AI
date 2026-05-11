@@ -21,7 +21,9 @@ export type SkinDiaryAnalysisJson = {
 
 export type SkinEntryListItem = {
   id: string;
-  imageUrl: string;
+  imageUrlFront: string;
+  imageUrlLeft: string | null;
+  imageUrlRight: string | null;
   userNote: string | null;
   createdAt: string;
   analysisResult: SkinDiaryAnalysisJson;

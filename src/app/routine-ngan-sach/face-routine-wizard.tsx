@@ -4,19 +4,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 import { Loader2, Sparkles, Wallet } from "lucide-react";
-import { FaceScanCapture } from "@/app/components/face-scan-capture";
+import { MultiAngleFaceFlow, type CapturedTriplet } from "@/app/components/multi-angle-face-flow";
 import { RoutineBudgetDashboard } from "@/app/components/routine-budget-dashboard";
 import {
   BudgetRoutineResultView,
   ThreeTierRoutineResultView,
 } from "@/app/components/routine-suggestion-display";
-import { uploadSkinImageAction } from "@/actions/upload-skin-image";
 import {
   analyzeFaceRoutineAction,
   generateAndSaveRoutineAction,
 } from "@/actions/face-routine-budget";
 import type { FaceRoutineAnalysis, SavedRoutineGenResult } from "@/types/face-routine-budget";
 import { cn } from "@/lib/utils";
+import { GhostButton, StepTransition, VibeButton, VibeLink, triggerHaptic } from "@/components/ui";
 
 type Step = "capture" | "processing" | "scores" | "pick" | "generating" | "done";
 
@@ -27,48 +27,47 @@ function parseVndInput(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function FaceRoutineWizard() {
+type WizardProps = {
+  /** false = phiên khách: ẩn nút mở lịch sử gợi ý ở bước hoàn tất */
+  isLoggedIn: boolean;
+};
+
+export function FaceRoutineWizard({ isLoggedIn }: WizardProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState<Step>("capture");
   const [msg, setMsg] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [angleUrls, setAngleUrls] = useState<{ front: string; left: string; right: string } | null>(null);
   const [face, setFace] = useState<FaceRoutineAnalysis | null>(null);
   const [budgetInput, setBudgetInput] = useState("");
   const [savedId, setSavedId] = useState<string | null>(null);
   const [routine, setRoutine] = useState<SavedRoutineGenResult | null>(null);
+  const [captureKey, setCaptureKey] = useState(0);
 
-  const runUploadAndAnalyze = useCallback(async (file: File) => {
+  const runAnalyzeTriple = useCallback(async (tri: CapturedTriplet) => {
+    if (!tri.left?.trim() || !tri.right?.trim()) return;
     setMsg(null);
     setStep("processing");
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("scope", "face-scan");
-    const up = await uploadSkinImageAction(fd);
-    if (!up.ok) {
-      setMsg(up.error);
-      setStep("capture");
-      return;
-    }
-    setImageUrl(up.url);
-    const an = await analyzeFaceRoutineAction(up.url);
+    const an = await analyzeFaceRoutineAction(tri.front, tri.left, tri.right);
     if (!an.ok) {
       setMsg(an.error);
       setStep("capture");
+      setCaptureKey((k) => k + 1);
       return;
     }
+    setAngleUrls({ front: tri.front, left: tri.left, right: tri.right });
     setFace(an.data);
     setStep("scores");
   }, []);
 
-  const onFileReady = (file: File) => {
+  const onAnglesComplete = (tri: CapturedTriplet) => {
     startTransition(() => {
-      void runUploadAndAnalyze(file);
+      void runAnalyzeTriple(tri);
     });
   };
 
   const onBudgetSubmit = () => {
-    if (!imageUrl || !face) return;
+    if (!angleUrls || !face) return;
     const vnd = parseVndInput(budgetInput);
     if (vnd == null) {
       setMsg("Nhập số tiền (VND), ví dụ 1500000.");
@@ -78,7 +77,9 @@ export function FaceRoutineWizard() {
     setStep("generating");
     startTransition(async () => {
       const r = await generateAndSaveRoutineAction({
-        imageUrl,
+        imageUrlFront: angleUrls.front,
+        imageUrlLeft: angleUrls.left,
+        imageUrlRight: angleUrls.right,
         faceAnalysis: face,
         mode: "BUDGET",
         budgetVnd: vnd,
@@ -96,12 +97,14 @@ export function FaceRoutineWizard() {
   };
 
   const onAutoTiers = () => {
-    if (!imageUrl || !face) return;
+    if (!angleUrls || !face) return;
     setMsg(null);
     setStep("generating");
     startTransition(async () => {
       const r = await generateAndSaveRoutineAction({
-        imageUrl,
+        imageUrlFront: angleUrls.front,
+        imageUrlLeft: angleUrls.left,
+        imageUrlRight: angleUrls.right,
         faceAnalysis: face,
         mode: "AUTO",
       });
@@ -120,14 +123,16 @@ export function FaceRoutineWizard() {
   const reset = () => {
     setStep("capture");
     setMsg(null);
-    setImageUrl(null);
+    setAngleUrls(null);
     setFace(null);
     setBudgetInput("");
     setSavedId(null);
     setRoutine(null);
+    setCaptureKey((k) => k + 1);
   };
 
   const busy = pending || step === "processing" || step === "generating";
+  const flowKey = face ? `post-${step}` : "pre";
 
   return (
     <div className="relative space-y-6">
@@ -139,7 +144,7 @@ export function FaceRoutineWizard() {
         >
           <Loader2 className="h-10 w-10 animate-spin text-teal-600 dark:text-teal-400" aria-hidden />
           <p className="text-center text-sm font-medium text-slate-800 dark:text-white">
-            {step === "processing" ? "Đang tải ảnh & phân tích AI…" : "Đang tạo gợi ý routine…"}
+            {step === "processing" ? "Đang phân tích AI (3 góc)…" : "Đang phân tích và tạo gợi ý routine…"}
           </p>
         </div>
       ) : null}
@@ -150,146 +155,151 @@ export function FaceRoutineWizard() {
         </div>
       ) : null}
 
-      {step === "capture" || step === "processing" ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Bước 1 — Chụp / chọn ảnh mặt</h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
-            Ảnh rõ vùng da mặt, ánh sáng đều. Thanh quét chỉ là hiệu ứng giao diện.
-          </p>
-          <FaceScanCapture
-            className="mt-4"
-            onFileReady={onFileReady}
-            disabled={busy}
-            showScanLine={step === "capture" || step === "processing"}
-          />
-        </section>
-      ) : null}
-
-      {face && (step === "scores" || step === "pick" || step === "generating" || step === "done") ? (
-        <>
-          <div className="flex justify-end">
-            {step !== "generating" && step !== "done" ? (
-              <button
-                type="button"
-                onClick={reset}
-                className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline dark:text-zinc-500 dark:hover:text-zinc-300"
-              >
-                Phân tích ảnh khác
-              </button>
-            ) : null}
-          </div>
-          <RoutineBudgetDashboard data={face} />
-
-          {(step === "pick" || step === "generating") && (
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Bước 4 — Gợi ý routine</h2>
-              <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
-                Chọn cách lập danh sách sản phẩm (giá tham khảo thị trường VN).
-              </p>
-
-              <div className="mt-5 space-y-6">
-                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                    <Wallet className="h-4 w-4 text-teal-600 dark:text-teal-400" aria-hidden />
-                    A. Tự nhập ngân sách
-                  </div>
-                  <label htmlFor="budget-vnd" className="mt-2 block text-xs font-medium text-slate-600 dark:text-zinc-400">
-                    Số tiền (VND)
-                  </label>
-                  <input
-                    id="budget-vnd"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="Ví dụ: 1500000"
-                    value={budgetInput}
-                    onChange={(e) => setBudgetInput(e.target.value)}
-                    disabled={busy}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm tabular-nums dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={onBudgetSubmit}
-                    className="mt-3 flex w-full min-h-11 items-center justify-center rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-50"
-                  >
-                    Tạo routine theo ngân sách
-                  </button>
-                </div>
-
-                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                    <Sparkles className="h-4 w-4 text-amber-500 dark:text-amber-400" aria-hidden />
-                    B. Tự động — 3 gói gợi ý
-                  </div>
-                  <p className="mt-2 text-xs text-slate-600 dark:text-zinc-400">
-                    Tiết kiệm · Hiệu quả · Cao cấp (mức giá khác nhau).
-                  </p>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={onAutoTiers}
-                    className="mt-3 flex w-full min-h-11 items-center justify-center rounded-xl border-2 border-teal-600 bg-transparent px-4 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50 dark:border-teal-500 dark:text-teal-200 dark:hover:bg-teal-950/40"
-                  >
-                    Tạo 3 gói
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {step === "scores" && (
-            <button
-              type="button"
-              onClick={() => setStep("pick")}
-              className="flex w-full min-h-12 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-teal-600 dark:hover:bg-teal-500"
-            >
-              Tiếp tục — gợi ý routine
-            </button>
-          )}
-
-          {step === "done" && routine && (
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Gợi ý đã lưu</h2>
-              <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
-                Bạn có thể xem lại trong mục lịch sử gợi ý.
-              </p>
-              <div className="mt-4">
-                {routine.kind === "BUDGET" ? (
-                  <BudgetRoutineResultView pkg={routine.package} />
-                ) : (
-                  <ThreeTierRoutineResultView tiers={routine.tiers} />
-                )}
-              </div>
-              <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                {savedId ? (
-                  <Link
-                    href={`/routine-ngan-sach/${savedId}`}
-                    className={cn(
-                      "inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-500",
-                    )}
-                  >
-                    Mở chi tiết đã lưu
-                  </Link>
-                ) : null}
-                <Link
-                  href="/routine-ngan-sach/lich-su"
-                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-800 dark:border-zinc-600 dark:text-white"
-                >
-                  Lịch sử gợi ý
-                </Link>
-                <button
+      <StepTransition stepKey={flowKey} className="space-y-6">
+        {!face ? (
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Bước 1 — Ba góc mặt (bắt buộc)</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
+              Thứ tự: mặt trước → góc trái → góc phải (theo người trong ảnh). Ánh sáng đều, cả khuôn mặt. Thanh quét chỉ là
+              hiệu ứng giao diện.
+            </p>
+            <MultiAngleFaceFlow
+              key={captureKey}
+              className="mt-4"
+              minAngles={3}
+              scope="face-scan"
+              disabled={busy}
+              onComplete={onAnglesComplete}
+            />
+          </section>
+        ) : (
+          <>
+            <div className="flex justify-end">
+              {step !== "generating" && step !== "done" ? (
+                <GhostButton
                   type="button"
                   onClick={reset}
-                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 dark:border-zinc-600 dark:text-zinc-300"
+                  className="min-h-9 border-0 bg-transparent px-2 py-1 text-xs font-medium text-slate-500 shadow-none hover:bg-slate-100/80 hover:text-slate-800 hover:underline dark:text-zinc-500 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-300"
                 >
-                  Phân tích mới
-                </button>
-              </div>
-            </section>
-          )}
-        </>
-      ) : null}
+                  Phân tích ảnh khác
+                </GhostButton>
+              ) : null}
+            </div>
+            <RoutineBudgetDashboard data={face} />
+
+            {(step === "pick" || step === "generating") && (
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Bước 4 — Gợi ý routine</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
+                  Chọn cách lập danh sách sản phẩm (giá tham khảo thị trường VN).
+                </p>
+
+                <div className="mt-5 space-y-6">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+                      <Wallet className="h-4 w-4 text-teal-600 dark:text-teal-400" aria-hidden />
+                      A. Tự nhập ngân sách
+                    </div>
+                    <label htmlFor="budget-vnd" className="mt-2 block text-xs font-medium text-slate-600 dark:text-zinc-400">
+                      Số tiền (VND)
+                    </label>
+                    <input
+                      id="budget-vnd"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="Ví dụ: 1500000"
+                      value={budgetInput}
+                      onChange={(e) => setBudgetInput(e.target.value)}
+                      disabled={busy}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm tabular-nums dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    />
+                    <VibeButton
+                      className="mt-3 min-h-11 rounded-xl from-teal-600 via-teal-600 to-teal-500 shadow-md"
+                      disabled={busy}
+                      onClick={onBudgetSubmit}
+                    >
+                      Tạo routine theo ngân sách
+                    </VibeButton>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+                      <Sparkles className="h-4 w-4 text-amber-500 dark:text-amber-400" aria-hidden />
+                      B. Tự động — 3 gói gợi ý
+                    </div>
+                    <p className="mt-2 text-xs text-slate-600 dark:text-zinc-400">
+                      Tiết kiệm · Hiệu quả · Cao cấp (mức giá khác nhau).
+                    </p>
+                    <GhostButton
+                      type="button"
+                      disabled={busy}
+                      onClick={onAutoTiers}
+                      className={cn(
+                        "mt-3 w-full min-h-11 rounded-xl border-2 border-teal-600 bg-transparent font-semibold text-teal-800",
+                        "hover:bg-teal-50 dark:border-teal-500 dark:text-teal-200 dark:hover:bg-teal-950/40",
+                      )}
+                    >
+                      Tạo 3 gói
+                    </GhostButton>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {step === "scores" && (
+              <VibeButton
+                pulse={false}
+                className={cn(
+                  "min-h-12 rounded-xl from-slate-900 via-slate-900 to-slate-800 shadow-lg shadow-black/20",
+                  "dark:from-teal-600 dark:via-teal-600 dark:to-teal-500 dark:shadow-teal-900/30",
+                )}
+                type="button"
+                onClick={() => setStep("pick")}
+              >
+                Tiếp tục — gợi ý routine
+              </VibeButton>
+            )}
+
+            {step === "done" && routine && (
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Gợi ý đã lưu</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
+                  {isLoggedIn
+                    ? "Bạn có thể xem lại trong mục lịch sử gợi ý."
+                    : "Đăng nhập để xem lịch sử gợi ý trên mọi thiết bị."}
+                </p>
+                <div className="mt-4">
+                  {routine.kind === "BUDGET" ? (
+                    <BudgetRoutineResultView pkg={routine.package} />
+                  ) : (
+                    <ThreeTierRoutineResultView tiers={routine.tiers} />
+                  )}
+                </div>
+                <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                  {isLoggedIn && savedId ? (
+                    <VibeLink href={`/routine-ngan-sach/${savedId}`} className="flex-1">
+                      Mở chi tiết đã lưu
+                    </VibeLink>
+                  ) : null}
+                  {isLoggedIn ? (
+                    <Link
+                      href="/routine-ngan-sach/lich-su"
+                      onPointerDown={() => triggerHaptic(10)}
+                      className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 dark:border-zinc-600 dark:text-white dark:hover:bg-zinc-800/60"
+                    >
+                      Lịch sử gợi ý
+                    </Link>
+                  ) : null}
+                  <GhostButton type="button" onClick={reset} className="min-h-11 flex-1">
+                    Phân tích mới
+                  </GhostButton>
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </StepTransition>
     </div>
   );
 }

@@ -45,7 +45,7 @@ export function LoginForm() {
   return (
     <AuthShell
       title="Đăng nhập"
-      subtitle="Dùng email đã đăng ký để xem lịch sử phân tích."
+      subtitle="Dùng email đã đăng ký để xem lịch sử theo dõi da."
       footer={
         <p>
           Chưa có tài khoản?{" "}

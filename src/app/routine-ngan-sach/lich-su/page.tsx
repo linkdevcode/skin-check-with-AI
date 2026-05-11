@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveUserIdForRead } from "@/lib/skin-actor";
 import { PageBackBar } from "@/app/components/page-back-bar";
+import { AnonymousSkinNotice } from "@/app/components/anonymous-skin-notice";
+import { SkinGuestSessionInit } from "@/app/components/skin-guest-session-init";
 import type { FaceRoutineAnalysis, SavedRoutineGenResult } from "@/types/face-routine-budget";
 
 export const metadata: Metadata = {
@@ -26,28 +28,31 @@ function previewTotal(mode: string, raw: unknown): number | null {
 
 export default async function RoutineNganSachLichSuPage() {
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/dang-nhap?callbackUrl=/routine-ngan-sach/lich-su");
-  }
+  const isLoggedIn = Boolean(session?.user?.id);
+  const effectiveUserId = await getEffectiveUserIdForRead();
 
-  const rows = await prisma.recommendedRoutine.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "desc" },
-    take: 60,
-    select: {
-      id: true,
-      mode: true,
-      budgetVnd: true,
-      createdAt: true,
-      faceAnalysis: true,
-      routineResult: true,
-    },
-  });
+  const rows = effectiveUserId
+    ? await prisma.recommendedRoutine.findMany({
+        where: { userId: effectiveUserId },
+        orderBy: { createdAt: "desc" },
+        take: 60,
+        select: {
+          id: true,
+          mode: true,
+          budgetVnd: true,
+          createdAt: true,
+          faceAnalysis: true,
+          routineResult: true,
+        },
+      })
+    : [];
 
   return (
     <div className="min-h-dvh bg-slate-50 px-4 pb-24 pt-6 dark:bg-[#0b0e14]">
+      {!isLoggedIn ? <SkinGuestSessionInit active /> : null}
       <div className="mx-auto max-w-lg">
         <PageBackBar href="/routine-ngan-sach">Quay lại phân tích</PageBackBar>
+        {!isLoggedIn ? <AnonymousSkinNotice callbackPath="/routine-ngan-sach/lich-su" /> : null}
         <h1 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Lịch sử gợi ý routine</h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-zinc-400">
           Các phiên đã lưu (ảnh + phân tích + danh sách sản phẩm gợi ý).
