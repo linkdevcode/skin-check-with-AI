@@ -25,9 +25,6 @@ type Props = {
 
 const tapMotion = { scale: 0.9, transition: tweenTap };
 
-/**
- * Chọn ảnh qua input. Mũi tên điều hướng nằm ngoài khung ảnh (trong container rộng hơn), hiển thị mọi kích thước màn hình.
- */
 export function FaceScanCapture({
   onFileReady,
   committedImageUrl,
@@ -65,9 +62,7 @@ export function FaceScanCapture({
     onFileReady(f);
   };
 
-  const openPicker = () => {
-    fileInputRef.current?.click();
-  };
+  const openPicker = () => fileInputRef.current?.click();
 
   const onDiscard = () => {
     revokeBlob();
@@ -77,13 +72,13 @@ export function FaceScanCapture({
   return (
     <div className={cn("space-y-4", className)}>
       {/*
-        Layout: [btn-prev 40px] [ảnh flex-1] [btn-next 40px]
-        Mũi tên nằm bên ngoài khung ảnh, không che chi tiết da.
-        Ảnh tự co theo chiều rộng màn hình — không cứng w-[280px].
+        Wrapper đủ rộng để 2 nút mũi tên (44px mỗi bên) + gap (8px) nằm
+        bên ngoài ảnh mà không che.  Ảnh chiếm phần còn lại ở giữa.
+        Toàn bộ wrapper căn giữa trang.
       */}
-      <div className="flex items-center gap-2">
-        {/* Mũi tên trái — luôn chiếm 40px để layout ổn định */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+      <div className="relative mx-auto flex w-full max-w-sm items-center gap-2">
+        {/* CỘT TRÁI: nút trước — luôn chiếm 44px, không hiện nếu không có nút */}
+        <div className="flex w-11 shrink-0 items-center justify-center">
           {navArrows?.showLeft ? (
             <motion.button
               type="button"
@@ -93,7 +88,7 @@ export function FaceScanCapture({
                 e.stopPropagation();
                 navArrows.onPrev();
               }}
-              className="sk-touch-manipulation flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:active:bg-zinc-800"
+              className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
               aria-label="Xem bước ảnh trước"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden />
@@ -101,7 +96,7 @@ export function FaceScanCapture({
           ) : null}
         </div>
 
-        {/* Khung ảnh — flex-1 tự co theo màn hình */}
+        {/* CỘT GIỮA: ảnh tự co flex-1 */}
         <div className="relative min-w-0 flex-1">
           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-900/5 shadow-inner dark:border-zinc-700 dark:bg-black/40">
             {displaySrc ? (
@@ -135,8 +130,8 @@ export function FaceScanCapture({
           </div>
         </div>
 
-        {/* Mũi tên phải — luôn chiếm 40px */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+        {/* CỘT PHẢI: nút tiếp theo — luôn chiếm 44px */}
+        <div className="flex w-11 shrink-0 items-center justify-center">
           {navArrows?.showRight ? (
             <motion.button
               type="button"
@@ -146,7 +141,7 @@ export function FaceScanCapture({
                 e.stopPropagation();
                 navArrows.onNext();
               }}
-              className="sk-touch-manipulation flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:active:bg-zinc-800"
+              className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
               aria-label="Sang bước ảnh tiếp theo"
             >
               <ChevronRight className="h-5 w-5" aria-hidden />
