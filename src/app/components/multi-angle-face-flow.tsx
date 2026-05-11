@@ -149,6 +149,43 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
 
   const showCapture = minAngles === 3 || stepIdx === 0 || stepIdx >= 1;
 
+  const belowPreviewContinue =
+    awaitingManualAdvance && urls[KEYS[stepIdx]] ? (
+      <div className="space-y-3">
+        <p className="text-center text-xs font-medium text-slate-700 dark:text-zinc-200">
+          Ảnh đã tải lên. Chạm nút bên dưới để sang bước tiếp theo.
+        </p>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={advanceToNextStep}
+          className="sk-touch-manipulation flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-base font-semibold text-white shadow-lg shadow-teal-900/25 hover:bg-teal-500 disabled:opacity-50 dark:shadow-black/40"
+        >
+          {stepIdx === 0 ? "Tiếp tục: Góc trái" : "Tiếp tục: Góc phải"}
+          <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
+        </button>
+        {minAngles === 1 && stepIdx === 0 ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 dark:border-amber-900/50 dark:bg-amber-950/35">
+            <div className="flex gap-2 text-xs text-amber-950 dark:text-amber-100">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <p>
+                Không cần thêm góc phụ? Có thể gửi luôn chỉ ảnh mặt trước — <strong>phân tích nhanh hơn</strong>.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={finishFrontOnly}
+              className="sk-touch-manipulation mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-white"
+            >
+              <Check className="h-4 w-4" aria-hidden />
+              Chỉ gửi ảnh mặt trước (nhanh hơn)
+            </button>
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex gap-2" aria-hidden>
@@ -185,44 +222,8 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
           onFileReady={onFileReady}
           disabled={disabled || busy}
           showScanLine={busy}
+          belowPreviewSlot={belowPreviewContinue}
         />
-      ) : null}
-
-      {awaitingManualAdvance && urls[KEYS[stepIdx]] ? (
-        <div className="space-y-2">
-          <p className="text-center text-xs text-slate-600 dark:text-zinc-400">
-            Ảnh đã tải lên. Nhấn nút bên dưới để sang bước tiếp theo.
-          </p>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={advanceToNextStep}
-            className="sk-touch-manipulation flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-md shadow-teal-900/20 hover:bg-teal-500 disabled:opacity-50 dark:shadow-black/30"
-          >
-            {stepIdx === 0 ? "Tiếp tục: Góc trái" : "Tiếp tục: Góc phải"}
-            <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
-          </button>
-        </div>
-      ) : null}
-
-      {minAngles === 1 && stepIdx === 0 && awaitingManualAdvance && urls.front ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 dark:border-amber-900/50 dark:bg-amber-950/35">
-          <div className="flex gap-2 text-xs text-amber-950 dark:text-amber-100">
-            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <p>
-              Không cần thêm góc phụ? Có thể gửi luôn chỉ ảnh mặt trước — <strong>phân tích nhanh hơn</strong>.
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={finishFrontOnly}
-            className="sk-touch-manipulation mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-white"
-          >
-            <Check className="h-4 w-4" aria-hidden />
-            Chỉ gửi ảnh mặt trước (nhanh hơn)
-          </button>
-        </div>
       ) : null}
 
       {minAngles === 1 && stepIdx === 1 && urls.front && !urls.left && !awaitingManualAdvance ? (

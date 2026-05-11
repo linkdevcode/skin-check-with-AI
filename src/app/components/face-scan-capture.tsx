@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import { ImagePlus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,13 +9,15 @@ type Props = {
   onFileReady: (file: File) => void;
   disabled?: boolean;
   showScanLine?: boolean;
+  /** Hiển thị ngay dưới khung xem trước, trên hàng «Chọn ảnh khác» — để nút Tiếp tục luôn thấy trên mobile. */
+  belowPreviewSlot?: ReactNode;
   className?: string;
 };
 
 /**
  * Chỉ chọn ảnh qua input (hệ điều hành thường cho phép chụp mới hoặc chọn từ thư viện).
  */
-export function FaceScanCapture({ onFileReady, disabled, showScanLine, className }: Props) {
+export function FaceScanCapture({ onFileReady, disabled, showScanLine, belowPreviewSlot, className }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -64,6 +67,10 @@ export function FaceScanCapture({ onFileReady, disabled, showScanLine, className
           </div>
         ) : null}
       </div>
+
+      {preview && belowPreviewSlot ? (
+        <div className="mx-auto w-full max-w-[280px] space-y-2">{belowPreviewSlot}</div>
+      ) : null}
 
       <input
         ref={fileInputRef}
