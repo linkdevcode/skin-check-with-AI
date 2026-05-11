@@ -38,6 +38,10 @@ export function FaceScanCapture({
   const [blobPreview, setBlobPreview] = useState<string | null>(null);
 
   const displaySrc = blobPreview ?? committedImageUrl ?? null;
+  const canPrev = navArrows?.showLeft ?? false;
+  const canNext = navArrows?.showRight ?? false;
+  const handlePrev = navArrows?.onPrev ?? (() => {});
+  const handleNext = navArrows?.onNext ?? (() => {});
 
   useEffect(() => {
     if (!committedImageUrl) return;
@@ -79,21 +83,20 @@ export function FaceScanCapture({
       <div className="relative mx-auto flex w-full max-w-sm items-center gap-2">
         {/* CỘT TRÁI: nút trước — luôn chiếm 44px, không hiện nếu không có nút */}
         <div className="flex w-11 shrink-0 items-center justify-center">
-          {navArrows?.showLeft ? (
-            <motion.button
-              type="button"
-              disabled={disabled}
-              whileTap={disabled ? undefined : tapMotion}
-              onClick={(e) => {
-                e.stopPropagation();
-                navArrows.onPrev();
-              }}
-              className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-              aria-label="Xem bước ảnh trước"
-            >
-              <ChevronLeft className="h-5 w-5" aria-hidden />
-            </motion.button>
-          ) : null}
+          <motion.button
+            type="button"
+            disabled={disabled || !canPrev}
+            whileTap={disabled || !canPrev ? undefined : tapMotion}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (canPrev) handlePrev();
+            }}
+            className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-35 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            aria-label="Xem bước ảnh trước"
+            aria-disabled={disabled || !canPrev}
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+          </motion.button>
         </div>
 
         {/* CỘT GIỮA: ảnh tự co flex-1 */}
@@ -132,21 +135,20 @@ export function FaceScanCapture({
 
         {/* CỘT PHẢI: nút tiếp theo — luôn chiếm 44px */}
         <div className="flex w-11 shrink-0 items-center justify-center">
-          {navArrows?.showRight ? (
-            <motion.button
-              type="button"
-              disabled={disabled}
-              whileTap={disabled ? undefined : tapMotion}
-              onClick={(e) => {
-                e.stopPropagation();
-                navArrows.onNext();
-              }}
-              className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-              aria-label="Sang bước ảnh tiếp theo"
-            >
-              <ChevronRight className="h-5 w-5" aria-hidden />
-            </motion.button>
-          ) : null}
+          <motion.button
+            type="button"
+            disabled={disabled || !canNext}
+            whileTap={disabled || !canNext ? undefined : tapMotion}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (canNext) handleNext();
+            }}
+            className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-35 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            aria-label="Sang bước ảnh tiếp theo"
+            aria-disabled={disabled || !canNext}
+          >
+            <ChevronRight className="h-5 w-5" aria-hidden />
+          </motion.button>
         </div>
       </div>
 
