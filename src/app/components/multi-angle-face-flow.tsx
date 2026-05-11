@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { Check, Info } from "lucide-react";
+import { Check, ChevronRight, Info } from "lucide-react";
 import { FaceScanCapture } from "@/app/components/face-scan-capture";
 import { uploadSkinImageAction } from "@/actions/upload-skin-image";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,8 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
   });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  /** Sau khi upload xong ảnh ở bước hiện tại (chưa phải ảnh cuối), chờ người dùng nhấn tiếp tục — ổn định trên mobile. */
+  const [awaitingManualAdvance, setAwaitingManualAdvance] = useState(false);
 
   const stepIdxRef = useRef(stepIdx);
   useEffect(() => {
@@ -94,7 +96,7 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
             });
           } else {
             setUrls((prev) => ({ ...prev, [key]: url }));
-            setStepIdx((s) => s + 1);
+            setAwaitingManualAdvance(true);
           }
           return;
         }
@@ -102,10 +104,10 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
         // minAngles === 1
         if (key === "front") {
           setUrls((prev) => ({ ...prev, front: url }));
-          setStepIdx(1);
+          setAwaitingManualAdvance(true);
         } else if (key === "left") {
           setUrls((prev) => ({ ...prev, left: url }));
-          setStepIdx(2);
+          setAwaitingManualAdvance(true);
         } else {
           setUrls((prev) => {
             const next = { ...prev, right: url };
@@ -127,14 +129,21 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
     [disabled, minAngles, uploadFile],
   );
 
+  const advanceToNextStep = useCallback(() => {
+    setAwaitingManualAdvance(false);
+    setStepIdx((s) => s + 1);
+  }, []);
+
   const finishFrontOnly = () => {
     if (!urls.front) return;
+    setAwaitingManualAdvance(false);
     onCompleteRef.current({ front: urls.front, left: null, right: null });
   };
 
   const reset = () => {
     setStepIdx(0);
     setUrls({ front: null, left: null, right: null });
+    setAwaitingManualAdvance(false);
     setMsg(null);
   };
 
@@ -179,7 +188,44 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
         />
       ) : null}
 
-      {minAngles === 1 && stepIdx === 1 && urls.front && !urls.left ? (
+      {awaitingManualAdvance && urls[KEYS[stepIdx]] ? (
+        <div className="space-y-2">
+          <p className="text-center text-xs text-slate-600 dark:text-zinc-400">
+            Ảnh đã tải lên. Nhấn nút bên dưới để sang bước tiếp theo.
+          </p>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={advanceToNextStep}
+            className="sk-touch-manipulation flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white shadow-md shadow-teal-900/20 hover:bg-teal-500 disabled:opacity-50 dark:shadow-black/30"
+          >
+            {stepIdx === 0 ? "Tiếp tục: Góc trái" : "Tiếp tục: Góc phải"}
+            <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
+          </button>
+        </div>
+      ) : null}
+
+      {minAngles === 1 && stepIdx === 0 && awaitingManualAdvance && urls.front ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 dark:border-amber-900/50 dark:bg-amber-950/35">
+          <div className="flex gap-2 text-xs text-amber-950 dark:text-amber-100">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <p>
+              Không cần thêm góc phụ? Có thể gửi luôn chỉ ảnh mặt trước — <strong>phân tích nhanh hơn</strong>.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={finishFrontOnly}
+            className="sk-touch-manipulation mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-white"
+          >
+            <Check className="h-4 w-4" aria-hidden />
+            Chỉ gửi ảnh mặt trước (nhanh hơn)
+          </button>
+        </div>
+      ) : null}
+
+      {minAngles === 1 && stepIdx === 1 && urls.front && !urls.left && !awaitingManualAdvance ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 dark:border-amber-900/50 dark:bg-amber-950/35">
           <div className="flex gap-2 text-xs text-amber-950 dark:text-amber-100">
             <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
