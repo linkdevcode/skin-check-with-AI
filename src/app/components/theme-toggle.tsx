@@ -25,7 +25,7 @@ export function ThemeToggle() {
       aria-label={isDark ? "Chuyển chế độ sáng" : "Chuyển chế độ tối"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className={cn(
-        "relative h-9 w-14 shrink-0 overflow-hidden rounded-full border p-0.5 shadow-inner transition-colors",
+        "sk-press-feedback relative h-9 w-14 shrink-0 overflow-hidden rounded-full border p-0.5 shadow-inner",
         "border-slate-300/90 bg-slate-200 dark:border-slate-600 dark:bg-slate-800",
       )}
     >

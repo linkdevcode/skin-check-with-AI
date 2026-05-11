@@ -55,7 +55,7 @@ export function RegisterForm() {
       footer={
         <p>
           Đã có tài khoản?{" "}
-          <Link href="/dang-nhap" className="font-medium text-emerald-400 hover:text-emerald-300">
+          <Link href="/dang-nhap" className="sk-press-feedback font-medium text-emerald-400 hover:text-emerald-300">
             Đăng nhập
           </Link>
         </p>
@@ -122,7 +122,7 @@ export function RegisterForm() {
         <button
           type="submit"
           disabled={loading}
-          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-lg shadow-emerald-900/25 transition hover:from-emerald-400 hover:to-teal-400 disabled:opacity-45"
+          className="sk-press-feedback-subtle flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-lg shadow-emerald-900/25 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-45"
         >
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
           Tạo tài khoản

@@ -17,7 +17,10 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
       )}
     >
       <div className="mb-8 w-full max-w-md text-center">
-        <Link href="/" className="text-xs font-medium uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400/90">
+        <Link
+          href="/"
+          className="sk-press-feedback rounded-md px-2 py-1 text-xs font-medium uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400/90"
+        >
           SkinCheck AI
         </Link>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h1>

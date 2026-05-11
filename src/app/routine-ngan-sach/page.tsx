@@ -35,7 +35,7 @@ export default async function RoutineNganSachPage() {
                 Lịch sử gợi ý đã lưu
               </Link>
             ) : null}
-            <Link href="/routine" className="text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white">
+            <Link href="/routine" className="text-slate-600 font-bold hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white">
               Phân tích routine chữ
             </Link>
           </div>

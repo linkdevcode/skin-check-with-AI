@@ -42,7 +42,7 @@ export function ResetForm() {
       <AuthShell title="Liên kết không hợp lệ" subtitle="Thiếu mã xác thực. Hãy yêu cầu gửi lại email.">
         <Link
           href="/quen-mat-khau"
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800/50 text-sm font-semibold text-white hover:bg-zinc-800"
+          className="sk-press-feedback min-h-12 w-full rounded-2xl border border-zinc-700 bg-zinc-800/50 text-sm font-semibold text-white hover:bg-zinc-800"
         >
           Yêu cầu liên kết mới
         </Link>
@@ -55,7 +55,7 @@ export function ResetForm() {
       title="Đặt lại mật khẩu"
       subtitle="Nhập mật khẩu mới cho tài khoản của bạn."
       footer={
-        <Link href="/dang-nhap" className="font-medium text-emerald-400 hover:text-emerald-300">
+        <Link href="/dang-nhap" className="sk-press-feedback font-medium text-emerald-400 hover:text-emerald-300">
           ← Đăng nhập
         </Link>
       }
@@ -105,7 +105,7 @@ export function ResetForm() {
         <button
           type="submit"
           disabled={loading}
-          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-lg shadow-emerald-900/25 transition hover:from-emerald-400 hover:to-teal-400 disabled:opacity-45"
+          className="sk-press-feedback-subtle flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-base font-semibold text-white shadow-lg shadow-emerald-900/25 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-45"
         >
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
           Cập nhật mật khẩu

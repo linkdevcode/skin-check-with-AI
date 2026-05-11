@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useTransition } from "react";
 import { motion } from "framer-motion";
 import { LayoutGrid, Sparkles, WalletCards, BookHeart } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,17 +23,21 @@ const tabs: {
 ];
 
 export function LichSuTabStrip({ activeLoai }: { activeLoai: LichSuLoai }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const coarse = useCoarsePointerOrNarrow();
   const pillTransition = useMemo(() => (coarse ? tweenLayout : springSoft), [coarse]);
 
   return (
     <div
       className={cn(
-        "mt-5 flex gap-1 sm:flex-wrap sm:gap-2",
+        "mt-5 flex gap-1 transition-opacity duration-150 sm:flex-wrap sm:gap-2",
         "max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-40 max-sm:justify-between max-sm:border-t max-sm:border-slate-200 max-sm:bg-white/95 max-sm:px-1.5 max-sm:py-2 max-sm:pb-[max(0.6rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur-md dark:max-sm:border-zinc-800 dark:max-sm:bg-[#0b0e14]/95",
+        isPending && "opacity-[0.9]",
       )}
       role="tablist"
       aria-label="Lọc loại lịch sử"
+      aria-busy={isPending}
     >
       {tabs.map((t) => {
         const active = t.loai === activeLoai;
@@ -41,10 +46,26 @@ export function LichSuTabStrip({ activeLoai }: { activeLoai: LichSuLoai }) {
           <Link
             key={t.loai}
             href={t.href}
+            prefetch
+            scroll={false}
             role="tab"
             aria-selected={active}
+            aria-current={active ? "page" : undefined}
+            onClick={(e) => {
+              if (active) {
+                e.preventDefault();
+                return;
+              }
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+                return;
+              }
+              e.preventDefault();
+              startTransition(() => {
+                router.push(t.href);
+              });
+            }}
             className={cn(
-              "sk-touch-manipulation relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1.5 py-1.5 text-[10px] font-semibold leading-tight sm:min-h-9 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:py-1.5 sm:text-xs md:text-sm",
+              "sk-touch-manipulation relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1.5 py-1.5 text-[10px] font-semibold leading-tight transition-[transform,opacity] duration-150 ease-out [-webkit-tap-highlight-color:rgba(20,184,166,0.22)] active:scale-[0.97] active:opacity-[0.9] sm:min-h-9 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:py-1.5 sm:text-xs md:text-sm",
               active
                 ? "border-teal-600 text-white dark:border-teal-500"
                 : "border-slate-200 bg-white text-slate-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300",

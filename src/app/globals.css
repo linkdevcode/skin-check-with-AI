@@ -39,6 +39,61 @@ html {
   touch-action: manipulation;
 }
 
+/**
+ * Phản hồi chạm cho link/nút shell & auth (dùng trong SC, không cần Framer).
+ * inline-flex để :active scale áp dụng được trên cả link trong đoạn văn.
+ */
+.sk-press-feedback {
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: rgba(20, 184, 166, 0.2);
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.sk-press-feedback:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/** CTA full-width / gradient — scale nhẹ hơn */
+.sk-press-feedback-subtle {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(20, 184, 166, 0.18);
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.sk-press-feedback-subtle:active {
+  transform: scale(0.99);
+  opacity: 0.94;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-press-feedback,
+  .sk-press-feedback-subtle {
+    transition: none;
+  }
+
+  .sk-press-feedback:active {
+    transform: none;
+    opacity: 0.88;
+  }
+
+  .sk-press-feedback-subtle:active {
+    transform: none;
+    opacity: 0.9;
+  }
+}
+
 .sk-will-change-transform {
   will-change: transform;
 }

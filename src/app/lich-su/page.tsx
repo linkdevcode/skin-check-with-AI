@@ -57,8 +57,14 @@ export default async function LichSuPage({ searchParams }: PageProps) {
         where: { routine: { userId: session.user.id } },
         orderBy: { createdAt: "desc" },
         take: TAKE_EACH,
-        include: { routine: { select: { routineName: true } } },
+        select: {
+          id: true,
+          createdAt: true,
+          overallScore: true,
+          routine: { select: { routineName: true } },
+        },
       }),
+      // RecommendedRoutine / SkinEntry: mapper cần JSON đầy đủ cho badge; có thể thu hẹp sau bằng json path hoặc cột tóm tắt nếu payload lớn.
       prisma.recommendedRoutine.findMany({
         where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
@@ -96,7 +102,12 @@ export default async function LichSuPage({ searchParams }: PageProps) {
       where: { routine: { userId: session.user.id } },
       orderBy: { createdAt: "desc" },
       take: 80,
-      include: { routine: { select: { routineName: true } } },
+      select: {
+        id: true,
+        createdAt: true,
+        overallScore: true,
+        routine: { select: { routineName: true } },
+      },
     });
     items = routines.map(mapAnalysisHistoryRow);
   } else if (loai === "da-ngan-sach") {

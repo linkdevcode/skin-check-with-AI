@@ -15,8 +15,8 @@ export function PageBackBar({ href, children, className }: PageBackBarProps) {
       <Link
         href={href}
         className={cn(
-          "-ml-1 inline-flex min-h-11 max-w-full items-center gap-1 rounded-lg px-2 py-2.5 text-sm font-medium",
-          "text-teal-700 transition hover:bg-teal-500/10 hover:text-teal-800",
+          "sk-press-feedback -ml-1 inline-flex min-h-11 max-w-full items-center gap-1 rounded-lg px-2 py-2.5 text-sm font-medium",
+          "text-teal-700 hover:bg-teal-500/10 hover:text-teal-800",
           "dark:text-teal-400 dark:hover:bg-teal-950/50 dark:hover:text-teal-300",
         )}
       >

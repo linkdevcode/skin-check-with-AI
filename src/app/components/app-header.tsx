@@ -20,7 +20,7 @@ export async function AppHeader() {
               <>
                 <Link
                   href="/lich-su"
-                  className="min-h-10 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800/80 dark:hover:text-white"
+                  className="sk-press-feedback min-h-10 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800/80 dark:hover:text-white"
                 >
                   Lịch sử
                 </Link>
@@ -30,13 +30,13 @@ export async function AppHeader() {
               <>
                 <Link
                   href="/dang-nhap"
-                  className="min-h-10 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800/80 dark:hover:text-white"
+                  className="sk-press-feedback min-h-10 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-300 dark:hover:bg-zinc-800/80 dark:hover:text-white"
                 >
                   Đăng nhập
                 </Link>
                 <Link
                   href="/dang-ky"
-                  className="min-h-10 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-teal-900/20 hover:bg-teal-500"
+                  className="sk-press-feedback min-h-10 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-teal-900/20 hover:bg-teal-500"
                 >
                   Đăng ký
                 </Link>
