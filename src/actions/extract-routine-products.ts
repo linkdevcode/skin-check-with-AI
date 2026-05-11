@@ -1,6 +1,7 @@
 "use server";
 
-import { extractRoutineProducts, GeminiAnalysisError } from "@/lib/gemini";
+import { extractRoutineTextAction } from "@/lib/ai-provider";
+import { GeminiAnalysisError } from "@/lib/gemini";
 
 export type ExtractProductsResult =
   | { ok: true; morning: string[]; evening: string[] }
@@ -11,7 +12,7 @@ export async function extractRoutineProductsAction(
   eveningText: string,
 ): Promise<ExtractProductsResult> {
   try {
-    const data = await extractRoutineProducts(morningText, eveningText);
+    const data = await extractRoutineTextAction(morningText, eveningText);
     return { ok: true, morning: data.morning, evening: data.evening };
   } catch (e) {
     if (e instanceof GeminiAnalysisError) {

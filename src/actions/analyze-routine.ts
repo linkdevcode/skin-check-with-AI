@@ -2,7 +2,8 @@
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { analyzeWithGemini, GeminiAnalysisError } from "@/lib/gemini";
+import { analyzeTextAction } from "@/lib/ai-provider";
+import { GeminiAnalysisError } from "@/lib/gemini";
 import type { AcneSafety, ConflictItem, SkinTypeInput } from "@/types/routine-analysis";
 import { Prisma, SkinType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -105,7 +106,7 @@ async function persistAnalysis(input: {
 }
 
 /**
- * Phân tích bằng Gemini. Chỉ lưu DB khi người dùng đã đăng nhập.
+ * Phân tích routine: Groq (văn bản) + fallback Gemini; chỉ lưu DB khi đã đăng nhập.
  */
 export async function analyzeRoutine(
   routineText: string,
@@ -116,7 +117,7 @@ export async function analyzeRoutine(
   }
 
   try {
-    const result = await analyzeWithGemini(routineText, skinType);
+    const result = await analyzeTextAction(routineText, skinType);
     const conflicts = mapConflicts(result.conflicts);
     const acneSafety = toAcneSafety(result.acneSafety);
 

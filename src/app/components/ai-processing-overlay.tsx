@@ -21,17 +21,29 @@ const LOGS_ANALYZE = [
 type Props = {
   open: boolean;
   phase: Phase;
+  /** Sau ~2s chờ AI (retry 429) — thông điệp gợi ý, không phải lỗi. */
+  showSlowSystemMessage?: boolean;
   className?: string;
 };
 
-export function AiProcessingOverlay({ open, phase, className }: Props) {
+export function AiProcessingOverlay({ open, phase, showSlowSystemMessage, className }: Props) {
   const [logIdx, setLogIdx] = useState(0);
+  const [slowVisible, setSlowVisible] = useState(false);
   const logs = phase === "review" ? LOGS_REVIEW : LOGS_ANALYZE;
   const logLen = logs.length;
 
   useEffect(() => {
     setLogIdx(0);
   }, [phase, open]);
+
+  useEffect(() => {
+    if (!open || !showSlowSystemMessage) {
+      setSlowVisible(false);
+      return;
+    }
+    const t = window.setTimeout(() => setSlowVisible(true), 2000);
+    return () => clearTimeout(t);
+  }, [open, showSlowSystemMessage]);
 
   useEffect(() => {
     if (!open) {
@@ -72,6 +84,11 @@ export function AiProcessingOverlay({ open, phase, className }: Props) {
         ))}
       </div>
       <p className="mt-6 text-center text-base font-medium text-slate-800 dark:text-white">{title}</p>
+      {slowVisible ? (
+        <p className="mt-4 max-w-sm text-center text-sm leading-relaxed text-teal-800/95 dark:text-teal-200/90">
+          Hệ thống đang bận một chút, AI sẽ phản hồi trong giây lát…
+        </p>
+      ) : null}
       <pre
         className="font-mono mt-4 max-w-sm text-center text-xs leading-relaxed text-slate-500 dark:text-slate-400"
       >

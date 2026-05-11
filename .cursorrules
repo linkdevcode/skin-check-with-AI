@@ -18,14 +18,17 @@
 - Luôn kiểm tra xung đột hoạt chất (Actives Conflict) dựa trên kiến thức dược mỹ phẩm.
 - Khi hiển thị thành phần, ưu tiên hiển thị rõ các hoạt chất chính như: Retinol, BHA, AHA, Vitamin C, Niacinamide, Hyaluronic Acid.
 
-# SkinCheck AI Project Rules (Free Tier Edition)
-## AI Strategy
-- Engine: Google Gemini 2.5 Flash for multimodal (image scanning) or complex reasoning.
-- Rate Limit Handling: Implement retry logic with exponential backoff to stay within free tier limits.
+# SkinCheck AI Project Rules - Hybrid AI Architecture
 
-## Database & Storage
-- Provider: Vercel Postgres (Hobby Tier).
-- Data Retention: Clean up old analysis history after 30 days to stay under the 256MB free limit.
+## AI Strategy
+- **Vision Engine**: Google Gemini 2.5 Flash (Dùng cho Phân tích da ban đầu & So sánh Nhật ký da).
+- **Logic Engine**: Groq Llama 3.3 70B (Dùng cho Bóc tách routine, Kiểm tra xung đột, Phân bổ ngân sách).
+- **Fallback**: Nếu Groq lỗi, tự động chuyển sang Gemini cho các tác vụ văn bản.
+
+## Storage
+- Images: Vercel Blob (Lưu ảnh scan và nhật ký).
+- Data: Vercel Postgres + Prisma.
+- Cache: Vercel KV (Redis) để lưu kết quả phân tích routine, tránh gọi API trùng lặp.
 
 ## Optimization
 - Cache responses in Redis (Upstash Free Tier) for common products to save AI tokens.

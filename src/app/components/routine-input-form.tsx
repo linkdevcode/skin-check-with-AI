@@ -26,9 +26,18 @@ import { analyzeRoutine } from "@/actions/analyze-routine";
 import { extractRoutineProductsAction } from "@/actions/extract-routine-products";
 import { formatRoutineForAnalysis } from "@/lib/routine-format";
 import { saveRoutineResult } from "@/lib/routine-result-storage";
+import {
+  hashRoutineAnalyzeInputs,
+  readRoutineAnalysisLocalCache,
+  writeRoutineAnalysisLocalCache,
+} from "@/lib/routine-analysis-client-cache";
 import type { SkinTypeInput } from "@/types/routine-analysis";
 import { cn } from "@/lib/utils";
 import { InteractiveCard, MotionReveal, VibeButton, triggerHaptic } from "@/components/ui";
+
+function isTransientAiCode(code?: string): boolean {
+  return code === "RATE_LIMIT" || code === "UNAVAILABLE";
+}
 
 const SKIN_OPTIONS: { id: SkinTypeInput; label: string; Icon: LucideIcon }[] = [
   { id: "OILY", label: "Dầu", Icon: Droplets },
@@ -103,7 +112,9 @@ export function RoutineInputForm() {
   const [reviewing, setReviewing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | undefined>();
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewErrorCode, setReviewErrorCode] = useState<string | undefined>();
 
   useEffect(() => {
     if (!reviewed || !lockedSnapshot) return;
@@ -126,11 +137,13 @@ export function RoutineInputForm() {
     if (!rawHasContent) return;
     setReviewing(true);
     setReviewError(null);
+    setReviewErrorCode(undefined);
     setError(null);
     try {
       const res = await extractRoutineProductsAction(amText, pmText);
       if (!res.ok) {
         setReviewError(res.error);
+        setReviewErrorCode(res.code);
         return;
       }
       setMorningRows(rowsFromStrings(res.morning));
@@ -151,14 +164,42 @@ export function RoutineInputForm() {
     if (!amList.length && !pmList.length) return;
 
     const routineText = formatRoutineForAnalysis(amList, pmList);
+    const hash = hashRoutineAnalyzeInputs(routineText, skinType);
 
     setLoading(true);
     setError(null);
+    setErrorCode(undefined);
+
+    const cached = readRoutineAnalysisLocalCache(hash);
+    if (cached) {
+      try {
+        const persistMessage =
+          status === "authenticated"
+            ? "Routine không đổi — hiển thị kết quả đã phân tích gần đây (không gọi lại AI)."
+            : null;
+        const guestNoSaveHint = status !== "authenticated";
+        saveRoutineResult({
+          score: cached.score,
+          conflicts: cached.conflicts,
+          markdown: cached.recommendations,
+          acneSafety: cached.acneSafety,
+          persistMessage,
+          guestNoSaveHint,
+        });
+        router.push("/routine/ket-qua");
+      } catch {
+        setError("Không thể hoàn tất phân tích. Kiểm tra kết nối và thử lại.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     try {
       const res = await analyzeRoutine(routineText, skinType);
       if (!res.ok) {
         setError(res.error);
+        setErrorCode(res.code);
         return;
       }
 
@@ -172,6 +213,15 @@ export function RoutineInputForm() {
       } else {
         guestNoSaveHint = true;
       }
+
+      writeRoutineAnalysisLocalCache({
+        v: 1,
+        hash,
+        score: res.score,
+        conflicts: res.conflicts,
+        recommendations: res.recommendations,
+        acneSafety: res.acneSafety,
+      });
 
       saveRoutineResult({
         score: res.score,
@@ -203,7 +253,7 @@ export function RoutineInputForm() {
 
   return (
     <>
-      <AiProcessingOverlay open={overlayOpen} phase={overlayPhase} />
+      <AiProcessingOverlay open={overlayOpen} phase={overlayPhase} showSlowSystemMessage={overlayOpen} />
 
       <div
         className={cn(
@@ -353,7 +403,12 @@ tẩy trang → BHA → Retinol → kem dưỡng`}
 
               {reviewError ? (
                 <p
-                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/40 dark:bg-red-950/35 dark:text-red-200"
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-sm",
+                    isTransientAiCode(reviewErrorCode)
+                      ? "border-teal-200/90 bg-teal-50/90 text-teal-950 dark:border-teal-800/60 dark:bg-teal-950/35 dark:text-teal-100"
+                      : "border-red-200 bg-red-50 text-red-800 dark:border-red-900/40 dark:bg-red-950/35 dark:text-red-200",
+                  )}
                   role="alert"
                 >
                   {reviewError}
@@ -407,10 +462,23 @@ tẩy trang → BHA → Retinol → kem dưỡng`}
 
             {error ? (
               <div
-                className="mt-4 flex gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 ring-1 ring-red-200/80 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200 dark:ring-red-500/20"
+                className={cn(
+                  "mt-4 flex gap-3 rounded-2xl border px-4 py-3 text-sm ring-1",
+                  isTransientAiCode(errorCode)
+                    ? "border-teal-200/90 bg-teal-50/90 text-teal-950 ring-teal-200/70 dark:border-teal-800/55 dark:bg-teal-950/40 dark:text-teal-50 dark:ring-teal-800/50"
+                    : "border-red-200 bg-red-50 text-red-900 ring-red-200/80 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200 dark:ring-red-500/20",
+                )}
                 role="alert"
               >
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden />
+                <AlertCircle
+                  className={cn(
+                    "mt-0.5 h-5 w-5 shrink-0",
+                    isTransientAiCode(errorCode)
+                      ? "text-teal-600 dark:text-teal-400"
+                      : "text-red-600 dark:text-red-400",
+                  )}
+                  aria-hidden
+                />
                 <p>{error}</p>
               </div>
             ) : null}

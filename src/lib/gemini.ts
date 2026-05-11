@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI, SchemaType, type ResponseSchema } from "@google/generative-ai";
 import type { SkinTypeInput } from "@/types/routine-analysis";
 import { assertAllowedSkinImageUrl, isVercelBlobPrivateUrl } from "@/lib/skin-blob-url";
+import { withTransientAiRetries } from "@/lib/ai-retry";
+import { compressImageBufferForGemini } from "@/lib/image-compress";
 import { get } from "@vercel/blob";
 import type { SkinDiaryAnalysisJson } from "@/types/skin-diary";
 import type {
@@ -15,7 +17,7 @@ import type {
 
 const MODEL_ID = "gemini-2.5-flash";
 
-const SKIN_LABEL_VI: Record<SkinTypeInput, string> = {
+export const ROUTINE_SKIN_LABEL_VI: Record<SkinTypeInput, string> = {
   OILY: "Da dầu",
   DRY: "Da khô",
   COMBINATION: "Da hỗn hợp",
@@ -91,7 +93,7 @@ const ROUTINE_ANALYSIS_SCHEMA: ResponseSchema = {
   required: ["score", "conflicts", "recommendations", "acneSafety"],
 };
 
-const SYSTEM_INSTRUCTION = `Bạn là bác sĩ da liễu có kinh nghiệm lâm sàng và kiến thức dược mỹ phẩm (cosmeceuticals). Bạn đang hỗ trợ ứng dụng phân tích routine chăm sóc da dành cho người dùng Việt Nam.
+export const ROUTINE_ANALYSIS_SYSTEM_INSTRUCTION = `Bạn là bác sĩ da liễu có kinh nghiệm lâm sàng và kiến thức dược mỹ phẩm (cosmeceuticals). Bạn đang hỗ trợ ứng dụng phân tích routine chăm sóc da dành cho người dùng Việt Nam.
 
 Nhiệm vụ:
 1. Đọc văn bản routine và **loại da** mà người dùng đã chọn. Điều chỉnh lời khuyên: da dầu (bài tiết bã, mụn viêm) — làm rõ bước không làm khô quá mức; da khô — ưu tiên barrier, tránh stack quá nhiều exfoliant; da hỗn hợp — tách vùng T / má khi gợi ý; da nhạy cảm — giảm tần suất và layer hoạt chất mạnh.
@@ -102,6 +104,13 @@ Nhiệm vụ:
 6. Giọng điệu chuyên nghiệp, thân thiện, tiếng Việt.
 
 Chỉ trả về JSON đúng schema (gồm \`acneSafety\`). \`recommendations\` là Markdown hợp lệ và phải nhất quán với loại da đã cho.`;
+
+/** Gợi ý cấu trúc JSON cho engine không có schema cứng (Groq). */
+export const ROUTINE_ALYSIS_JSON_SHAPE_NOTE = `Định dạng output — một object JSON duy nhất:
+- score: number (0–100)
+- conflicts: array of { pair: string, level: "high"|"medium"|"low", hint?: string }
+- recommendations: string (Markdown tiếng Việt, có ## và bullet)
+- acneSafety: { summary: string, riskLevel: "low"|"moderate"|"high", poreCloggingConcerns: string[] }`;
 
 function getApiKey(): string {
   const key =
@@ -143,10 +152,6 @@ export type RoutineAnalysisJson = {
   };
 };
 
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 function mapGeminiError(err: unknown): GeminiAnalysisError {
   const message =
     err instanceof Error
@@ -180,7 +185,7 @@ function mapGeminiError(err: unknown): GeminiAnalysisError {
   ) {
     return new GeminiAnalysisError(
       "RATE_LIMIT",
-      "Đã vượt giới hạn gọi API Gemini. Thử lại sau vài phút.",
+      "Hệ thống AI đang quá tải sau nhiều lần thử. Vui lòng chờ vài phút rồi thử lại.",
       err,
     );
   }
@@ -294,12 +299,12 @@ function parseJsonResponse(raw: string): RoutineAnalysisJson {
   };
 }
 
-const SKIN_TYPE_SET = new Set<SkinTypeInput>(["OILY", "DRY", "COMBINATION", "SENSITIVE"]);
+export const ROUTINE_SKIN_TYPE_SET = new Set<SkinTypeInput>(["OILY", "DRY", "COMBINATION", "SENSITIVE"]);
 
 /**
- * Gọi Gemini với response MIME JSON theo schema; có retry backoff cho lỗi tạm thời.
+ * Một lần gọi Gemini cho phân tích routine (retry bọc ngoài bằng withTransientAiRetries / ai-provider).
  */
-export async function analyzeWithGemini(
+export async function geminiAnalyzeRoutineOnce(
   routineText: string,
   skinType: SkinTypeInput,
 ): Promise<RoutineAnalysisJson> {
@@ -308,7 +313,7 @@ export async function analyzeWithGemini(
     throw new GeminiAnalysisError("INPUT", "Routine không được để trống.");
   }
 
-  if (!SKIN_TYPE_SET.has(skinType)) {
+  if (!ROUTINE_SKIN_TYPE_SET.has(skinType)) {
     throw new GeminiAnalysisError("INPUT", "Loại da không hợp lệ.");
   }
 
@@ -320,7 +325,7 @@ export async function analyzeWithGemini(
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: MODEL_ID,
-    systemInstruction: SYSTEM_INSTRUCTION,
+    systemInstruction: ROUTINE_ANALYSIS_SYSTEM_INSTRUCTION,
     generationConfig: {
       temperature: 0.35,
       topP: 0.9,
@@ -330,7 +335,7 @@ export async function analyzeWithGemini(
     },
   });
 
-  const skinLabel = SKIN_LABEL_VI[skinType];
+  const skinLabel = ROUTINE_SKIN_LABEL_VI[skinType];
 
   const userText = `Người dùng chọn loại da: **${skinLabel}** (mã: ${skinType}).
 
@@ -340,33 +345,21 @@ Phân tích routine sau và trả về JSON đúng schema (một object duy nh�
 ${trimmed}
 ---`;
 
-  const maxAttempts = 4;
-  let lastErr: unknown;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const result = await model.generateContent(userText);
-      const raw = result.response.text();
-      return parseJsonResponse(raw);
-    } catch (e) {
-      lastErr = e;
-      const mapped = mapGeminiError(e);
-      const retryable =
-        mapped.code === "RATE_LIMIT" ||
-        mapped.code === "UNAVAILABLE" ||
-        mapped.code === "NETWORK" ||
-        (e instanceof Error && /429|503|fetch/i.test(e.message));
-
-      if (retryable && attempt < maxAttempts - 1) {
-        const delay = Math.min(8000, 600 * 2 ** attempt) + Math.random() * 300;
-        await sleep(delay);
-        continue;
-      }
-      throw mapped;
-    }
+  try {
+    const result = await model.generateContent(userText);
+    const raw = result.response.text();
+    return parseJsonResponse(raw);
+  } catch (e) {
+    throw mapGeminiError(e);
   }
+}
 
-  throw mapGeminiError(lastErr);
+/** @deprecated Dùng analyzeTextAction từ @/lib/ai-provider. */
+export async function analyzeWithGemini(
+  routineText: string,
+  skinType: SkinTypeInput,
+): Promise<RoutineAnalysisJson> {
+  return withTransientAiRetries(() => geminiAnalyzeRoutineOnce(routineText, skinType));
 }
 
 // --- Bóc tách sản phẩm (Review / Hybrid) ---
@@ -390,7 +383,7 @@ const EXTRACT_PRODUCTS_SCHEMA: ResponseSchema = {
   required: ["morning", "evening"],
 };
 
-const EXTRACT_PRODUCTS_INSTRUCTION = `Bạn trích xuất thông tin routine skincare. Nhận hai khối văn bản: buổi sáng và buổi tối (có thể một bên trống).
+export const EXTRACT_ROUTINE_PRODUCTS_INSTRUCTION = `Bạn trích xuất thông tin routine skincare. Nhận hai khối văn bản: buổi sáng và buổi tối (có thể một bên trống).
 
 Nhiệm vụ:
 - Tách thành **danh sách các sản phẩm hoặc bước** theo đúng thứ tự người dùng mô tả (từ sữa rửa → serum → kem dưỡng → SPF…).
@@ -430,9 +423,9 @@ function parseExtractProductsJson(raw: string): RoutineProductsExtract {
 }
 
 /**
- * AI tách sản phẩm từ text sáng / tối (bước Review).
+ * Một lần gọi Gemini tách sản phẩm (retry bọc ngoài).
  */
-export async function extractRoutineProducts(
+export async function geminiExtractRoutineProductsOnce(
   morningText: string,
   eveningText: string,
 ): Promise<RoutineProductsExtract> {
@@ -449,7 +442,7 @@ export async function extractRoutineProducts(
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: MODEL_ID,
-    systemInstruction: EXTRACT_PRODUCTS_INSTRUCTION,
+    systemInstruction: EXTRACT_ROUTINE_PRODUCTS_INSTRUCTION,
     generationConfig: {
       temperature: 0.2,
       topP: 0.85,
@@ -461,33 +454,21 @@ export async function extractRoutineProducts(
 
   const userBlock = `### Buổi sáng (AM)\n${am || "(trống)"}\n\n### Buổi tối (PM)\n${pm || "(trống)"}\n\nTrả về JSON với morning và evening là mảng chuỗi.`;
 
-  const maxAttempts = 3;
-  let lastErr: unknown;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const result = await model.generateContent(userBlock);
-      const raw = result.response.text();
-      return parseExtractProductsJson(raw);
-    } catch (e) {
-      lastErr = e;
-      const mapped = mapGeminiError(e);
-      const retryable =
-        mapped.code === "RATE_LIMIT" ||
-        mapped.code === "UNAVAILABLE" ||
-        mapped.code === "NETWORK" ||
-        (e instanceof Error && /429|503|fetch/i.test(e.message));
-
-      if (retryable && attempt < maxAttempts - 1) {
-        const delay = Math.min(6000, 500 * 2 ** attempt) + Math.random() * 200;
-        await sleep(delay);
-        continue;
-      }
-      throw mapped;
-    }
+  try {
+    const result = await model.generateContent(userBlock);
+    const raw = result.response.text();
+    return parseExtractProductsJson(raw);
+  } catch (e) {
+    throw mapGeminiError(e);
   }
+}
 
-  throw mapGeminiError(lastErr);
+/** @deprecated Dùng extractRoutineTextAction từ @/lib/ai-provider. */
+export async function extractRoutineProducts(
+  morningText: string,
+  eveningText: string,
+): Promise<RoutineProductsExtract> {
+  return withTransientAiRetries(() => geminiExtractRoutineProductsOnce(morningText, eveningText));
 }
 
 // --- Nhật ký da / Vision (Gemini 2.5 Flash) ---
@@ -513,7 +494,6 @@ async function fetchImageInlinePart(
   assertAllowedSkinImageUrl(imageUrl);
   const signal = AbortSignal.timeout(30_000);
   let buf: Buffer;
-  let rawMime: string;
 
   if (isVercelBlobPrivateUrl(imageUrl)) {
     const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
@@ -528,23 +508,25 @@ async function fetchImageInlinePart(
       throw new GeminiAnalysisError("NETWORK", "Không tải được ảnh Blob (404 hoặc hết quyền).");
     }
     buf = await readableStreamToBuffer(got.stream);
-    rawMime = got.blob.contentType?.split(";")[0]?.trim() || "image/jpeg";
   } else {
     const res = await fetch(imageUrl, { signal });
     if (!res.ok) {
       throw new GeminiAnalysisError("NETWORK", `Không tải được ảnh (${res.status}).`);
     }
     buf = Buffer.from(await res.arrayBuffer());
-    rawMime = res.headers.get("content-type")?.split(";")[0]?.trim() || "image/jpeg";
   }
 
   if (buf.length > 8 * 1024 * 1024) {
     throw new GeminiAnalysisError("INPUT", "Ảnh quá lớn (tối đa 8MB).");
   }
-  const mime = /^image\/(jpeg|jpg|png|webp)$/i.test(rawMime)
-    ? rawMime.replace(/jpg/i, "jpeg")
-    : "image/jpeg";
-  return { inlineData: { data: buf.toString("base64"), mimeType: mime } };
+
+  const compressed = await compressImageBufferForGemini(buf);
+  return {
+    inlineData: {
+      data: compressed.buffer.toString("base64"),
+      mimeType: compressed.mimeType,
+    },
+  };
 }
 
 const SKIN_PORTRAIT_SCHEMA: ResponseSchema = {
@@ -668,7 +650,7 @@ function parseSkinCompareJson(raw: string): SkinDiaryAnalysisJson {
   };
 }
 
-async function runVisionJson(
+async function runVisionJsonOnce(
   parts: Array<string | { inlineData: { data: string; mimeType: string } }>,
   schema: ResponseSchema,
   temperature: number,
@@ -687,29 +669,20 @@ async function runVisionJson(
     },
   });
 
-  const maxAttempts = 3;
-  let lastErr: unknown;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const result = await model.generateContent(parts);
-      return result.response.text();
-    } catch (e) {
-      lastErr = e;
-      const mapped = mapGeminiError(e);
-      const retryable =
-        mapped.code === "RATE_LIMIT" ||
-        mapped.code === "UNAVAILABLE" ||
-        mapped.code === "NETWORK" ||
-        (e instanceof Error && /429|503|fetch/i.test(e.message));
-      if (retryable && attempt < maxAttempts - 1) {
-        const delay = Math.min(6000, 500 * 2 ** attempt) + Math.random() * 200;
-        await sleep(delay);
-        continue;
-      }
-      throw mapped;
-    }
+  try {
+    const result = await model.generateContent(parts);
+    return result.response.text();
+  } catch (e) {
+    throw mapGeminiError(e);
   }
-  throw mapGeminiError(lastErr);
+}
+
+async function runVisionJson(
+  parts: Array<string | { inlineData: { data: string; mimeType: string } }>,
+  schema: ResponseSchema,
+  temperature: number,
+): Promise<string> {
+  return withTransientAiRetries(() => runVisionJsonOnce(parts, schema, temperature));
 }
 
 /**
@@ -1074,7 +1047,7 @@ function parseThreeTierRoutineJson(raw: string): ThreeTierRoutineResult {
   };
 }
 
-async function runTextJsonGemini(
+async function runTextJsonGeminiOnce(
   systemInstruction: string,
   userContent: string,
   schema: ResponseSchema,
@@ -1095,29 +1068,24 @@ async function runTextJsonGemini(
     },
   });
 
-  const maxAttempts = 3;
-  let lastErr: unknown;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const result = await model.generateContent(userContent);
-      return result.response.text();
-    } catch (e) {
-      lastErr = e;
-      const mapped = mapGeminiError(e);
-      const retryable =
-        mapped.code === "RATE_LIMIT" ||
-        mapped.code === "UNAVAILABLE" ||
-        mapped.code === "NETWORK" ||
-        (e instanceof Error && /429|503|fetch/i.test(e.message));
-      if (retryable && attempt < maxAttempts - 1) {
-        const delay = Math.min(6000, 500 * 2 ** attempt) + Math.random() * 200;
-        await sleep(delay);
-        continue;
-      }
-      throw mapped;
-    }
+  try {
+    const result = await model.generateContent(userContent);
+    return result.response.text();
+  } catch (e) {
+    throw mapGeminiError(e);
   }
-  throw mapGeminiError(lastErr);
+}
+
+async function runTextJsonGemini(
+  systemInstruction: string,
+  userContent: string,
+  schema: ResponseSchema,
+  temperature: number,
+  maxOutputTokens: number,
+): Promise<string> {
+  return withTransientAiRetries(() =>
+    runTextJsonGeminiOnce(systemInstruction, userContent, schema, temperature, maxOutputTokens),
+  );
 }
 
 /**
@@ -1182,4 +1150,12 @@ Trả về JSON đúng schema (tietKiem, hieuQua, caoCap).`;
     8192,
   );
   return parseThreeTierRoutineJson(raw);
+}
+
+export function parseRoutineAnalysisJson(raw: string): RoutineAnalysisJson {
+  return parseJsonResponse(raw);
+}
+
+export function parseRoutineProductsExtractJson(raw: string): RoutineProductsExtract {
+  return parseExtractProductsJson(raw);
 }
