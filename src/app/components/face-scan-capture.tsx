@@ -85,15 +85,16 @@ export function FaceScanCapture({
         <div className="flex w-11 shrink-0 items-center justify-center">
           <motion.button
             type="button"
-            disabled={disabled || !canPrev}
-            whileTap={disabled || !canPrev ? undefined : tapMotion}
+            whileTap={tapMotion}
             onClick={(e) => {
               e.stopPropagation();
-              if (canPrev) handlePrev();
+              handlePrev();
             }}
-            className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-35 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            className={cn(
+              "sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
+              !canPrev && "opacity-45",
+            )}
             aria-label="Xem bước ảnh trước"
-            aria-disabled={disabled || !canPrev}
           >
             <ChevronLeft className="h-5 w-5" aria-hidden />
           </motion.button>
@@ -137,15 +138,16 @@ export function FaceScanCapture({
         <div className="flex w-11 shrink-0 items-center justify-center">
           <motion.button
             type="button"
-            disabled={disabled || !canNext}
-            whileTap={disabled || !canNext ? undefined : tapMotion}
+            whileTap={tapMotion}
             onClick={(e) => {
               e.stopPropagation();
-              if (canNext) handleNext();
+              handleNext();
             }}
-            className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-35 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+            className={cn(
+              "sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
+              !canNext && "opacity-45",
+            )}
             aria-label="Sang bước ảnh tiếp theo"
-            aria-disabled={disabled || !canNext}
           >
             <ChevronRight className="h-5 w-5" aria-hidden />
           </motion.button>
