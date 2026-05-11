@@ -168,7 +168,7 @@ export default async function LichSuPage({ searchParams }: PageProps) {
                 href="/routine-ngan-sach"
                 className="inline-flex min-h-11 items-center justify-center rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white hover:bg-violet-500"
               >
-                Da &amp; ngân sách
+                Da &amp; gợi ý routine
               </Link>
               <Link
                 href="/nhat-ky-da"

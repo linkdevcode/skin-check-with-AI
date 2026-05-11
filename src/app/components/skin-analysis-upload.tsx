@@ -15,8 +15,8 @@ const STEPS_VI = [
 
 const STEP_PROGRESS_LABELS = [
   "Ảnh 1/3: Mặt trước (bắt buộc)",
-  "Ảnh 2/3: Góc trái",
-  "Ảnh 3/3: Góc phải",
+  "Ảnh 2/3: Góc trái (bắt buộc)",
+  "Ảnh 3/3: Góc phải (bắt buộc)",
 ] as const;
 
 const FRONT_REQUIRED_MSG = "Cần chụp ảnh mặt trước để tiếp tục.";
@@ -120,8 +120,6 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
 
   const hasFront = !!frontImage;
   const hasLeft = !!leftImage;
-  const canStart = !!(frontImage && leftImage && rightImage);
-
   const navArrows: FaceFrameNavArrows = (() => {
     if (stepIdx === 0) {
       return {
@@ -182,9 +180,8 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
 
       <button
         type="button"
-        disabled={disabled || !canStart}
         onClick={handleStart}
-        className="sk-touch-manipulation w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-violet-500 disabled:opacity-50 dark:bg-violet-500 dark:hover:bg-violet-400"
+        className="sk-touch-manipulation w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-violet-500 dark:bg-violet-500 dark:hover:bg-violet-400"
       >
         Bắt đầu phân tích
       </button>

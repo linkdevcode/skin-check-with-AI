@@ -7,7 +7,7 @@ import { SkinGuestSessionInit } from "@/app/components/skin-guest-session-init";
 import { FaceRoutineWizard } from "./face-routine-wizard";
 
 export const metadata: Metadata = {
-  title: "Phân tích da & routine theo ngân sách",
+  title: "Phân tích da & gợi ý routine",
   description: "Ảnh da, điểm số AI và gợi ý sản phẩm theo ngân sách hoặc 3 gói.",
   robots: { index: false, follow: true },
 };

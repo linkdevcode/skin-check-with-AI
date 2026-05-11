@@ -202,9 +202,8 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
 
       <button
         type="button"
-        disabled={disabled || !frontImage}
         onClick={handleStart}
-        className="sk-touch-manipulation w-full rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-teal-500 disabled:opacity-50"
+        className="sk-touch-manipulation w-full rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-teal-500"
       >
         Bắt đầu phân tích
       </button>
