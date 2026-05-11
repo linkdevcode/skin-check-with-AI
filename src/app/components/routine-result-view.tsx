@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import { ScoreCircle } from "./score-circle";
 import { ConflictList } from "./conflict-list";

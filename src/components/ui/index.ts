@@ -1,4 +1,6 @@
 export { triggerHaptic } from "./haptic";
+export { springSnappy, springSoft, springBouncy, tweenTabIconBounce } from "./motion-spring";
+export { useCanHover } from "./use-can-hover";
 export { VibeButton } from "./vibe-button";
 export type { VibeButtonProps } from "./vibe-button";
 export { GhostButton } from "./ghost-button";

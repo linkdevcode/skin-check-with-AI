@@ -169,3 +169,21 @@ html {
   box-shadow: 0 0 14px rgba(45, 212, 191, 0.55);
   animation: face-scan-sweep 2.4s ease-in-out infinite;
 }
+
+/* Input / textarea — focus teal + đổ bóng (mobile-first) */
+.sk-input-focus-ring:focus,
+.sk-input-focus-ring:focus-visible {
+  outline: none;
+  border-color: rgb(20 184 166);
+  box-shadow:
+    0 0 0 3px rgba(45, 212, 191, 0.22),
+    0 10px 28px -10px rgba(13, 148, 136, 0.28);
+}
+
+.dark .sk-input-focus-ring:focus,
+.dark .sk-input-focus-ring:focus-visible {
+  border-color: rgb(45 212 191);
+  box-shadow:
+    0 0 0 3px rgba(45, 212, 191, 0.18),
+    0 12px 32px -12px rgba(34, 211, 172, 0.22);
+}

@@ -1,8 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-
-const ease = [0.22, 1, 0.36, 1] as const;
+import { springSoft } from "./motion-spring";
 
 const fadeSlide = {
   initial: { opacity: 0, y: 18 },
@@ -27,7 +26,7 @@ export function StepTransition({ stepKey, className, children }: StepTransitionP
         initial="initial"
         animate="animate"
         exit="exit"
-        transition={{ duration: 0.32, ease }}
+        transition={springSoft}
       >
         {children}
       </motion.div>
@@ -53,7 +52,7 @@ export function MotionReveal({ show, className, children }: MotionRevealProps) {
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3, ease }}
+          transition={springSoft}
         >
           {children}
         </motion.div>

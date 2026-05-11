@@ -3,7 +3,8 @@
 import Link, { type LinkProps } from "next/link";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { triggerHaptic } from "./haptic";
+import { useCanHover } from "./use-can-hover";
+import { springSnappy, springSoft } from "./motion-spring";
 
 const MotionLink = motion.create(Link);
 
@@ -13,8 +14,10 @@ type VibeLinkProps = LinkProps &
     children: React.ReactNode;
   };
 
-/** Link trông như nút primary — hover nổi, tap scale, pulse teal nhẹ */
-export function VibeLink({ className, children, ...props }: VibeLinkProps) {
+/** Link trông như nút primary — hover chỉ desktop; tap scale + haptic. */
+export function VibeLink({ className, children, onClick, ...props }: VibeLinkProps) {
+  const canHover = useCanHover();
+
   return (
     <MotionLink
       className={cn(
@@ -22,12 +25,26 @@ export function VibeLink({ className, children, ...props }: VibeLinkProps) {
         "bg-gradient-to-r from-teal-500 via-teal-500 to-cyan-500 shadow-md shadow-teal-900/20 dark:shadow-black/40",
         className,
       )}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.95 }}
-      transition={{ type: "spring", stiffness: 420, damping: 26 }}
-      onPointerDown={() => triggerHaptic(10)}
+      whileHover={canHover ? { y: -2, transition: springSoft } : undefined}
+      whileTap={{ scale: 0.96, opacity: 0.9, transition: springSnappy }}
+      transition={springSoft}
+      onClick={(e) => {
+        if (typeof window !== "undefined" && window.navigator.vibrate) {
+          window.navigator.vibrate(10);
+        }
+        onClick?.(e);
+      }}
       {...props}
     >
+      {canHover ? (
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-1 z-20 h-[3px] w-[38%] max-w-[9rem] rounded-full bg-gradient-to-r from-transparent via-white to-transparent opacity-95 shadow-[0_0_12px_rgba(204,251,241,0.9)]"
+          initial={false}
+          animate={{ x: ["-35%", "280%"] }}
+          transition={{ duration: 2.35, repeat: Infinity, ease: "easeInOut" }}
+        />
+      ) : null}
       <motion.span
         aria-hidden
         className="pointer-events-none absolute inset-0 rounded-xl"

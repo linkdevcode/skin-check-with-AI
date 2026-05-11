@@ -212,7 +212,7 @@ export function FaceRoutineWizard({ isLoggedIn }: WizardProps) {
                       value={budgetInput}
                       onChange={(e) => setBudgetInput(e.target.value)}
                       disabled={busy}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm tabular-nums dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                      className="sk-input-focus-ring mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm tabular-nums outline-none transition-[border-color,box-shadow] dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                     />
                     <VibeButton
                       className="mt-3 min-h-11 rounded-xl from-teal-600 via-teal-600 to-teal-500 shadow-md"

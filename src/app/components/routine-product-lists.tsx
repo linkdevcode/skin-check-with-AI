@@ -1,7 +1,10 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { springSnappy } from "@/components/ui/motion-spring";
+import { triggerHaptic } from "@/components/ui/haptic";
 
 export type ProductRow = { id: string; text: string };
 
@@ -17,6 +20,19 @@ export function stringsFromRows(rows: ProductRow[]): string[] {
   return rows.map((r) => r.text.trim()).filter(Boolean);
 }
 
+const listVariants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.05, delayChildren: 0.02 },
+  },
+};
+
+const rowVariants = {
+  hidden: { opacity: 0, y: -12 },
+  show: { opacity: 1, y: 0, transition: springSnappy },
+  exit: { opacity: 0, height: 0, marginBottom: 0, transition: { type: "spring" as const, stiffness: 400, damping: 32 } },
+};
+
 type SectionProps = {
   title: string;
   badge: string;
@@ -31,10 +47,12 @@ function ProductSection({ title, badge, rows, onChange, disabled }: SectionProps
   };
 
   const remove = (id: string) => {
+    if (typeof window !== "undefined" && window.navigator.vibrate) window.navigator.vibrate(10);
     onChange(rows.filter((r) => r.id !== id));
   };
 
   const add = () => {
+    triggerHaptic(10);
     onChange([...rows, { id: newRowId(), text: "" }]);
   };
 
@@ -46,43 +64,56 @@ function ProductSection({ title, badge, rows, onChange, disabled }: SectionProps
           {badge}
         </span>
       </div>
-      <ul className="space-y-2" role="list">
-        {rows.map((row) => (
-          <li
-            key={row.id}
-            className="flex items-stretch gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 p-1.5 ring-1 ring-inset ring-slate-200/80 dark:border-zinc-800 dark:bg-black/25 dark:ring-zinc-800/40"
-          >
-            <input
-              type="text"
-              value={row.text}
-              onChange={(e) => updateText(row.id, e.target.value)}
-              disabled={disabled}
-              placeholder="Tên sản phẩm / bước"
-              className={cn(
-                "min-h-10 min-w-0 flex-1 rounded-md border-0 bg-transparent px-2 py-1.5 text-sm text-slate-900",
-                "placeholder:text-slate-400 focus:outline-none focus:ring-0",
-                "dark:text-zinc-100 dark:placeholder:text-zinc-600",
-                "disabled:opacity-50",
-              )}
-              autoComplete="off"
-            />
-            <button
-              type="button"
-              onClick={() => remove(row.id)}
-              disabled={disabled}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 dark:border-zinc-700/80 dark:text-zinc-500 dark:hover:bg-red-950/50 dark:hover:text-red-400 disabled:opacity-40"
-              aria-label="Xóa dòng"
+      <motion.ul className="space-y-2" role="list" variants={listVariants} initial="hidden" animate="show">
+        <AnimatePresence mode="popLayout">
+          {rows.map((row) => (
+            <motion.li
+              key={row.id}
+              layout
+              variants={rowVariants}
+              initial="hidden"
+              animate="show"
+              exit="exit"
+              className="overflow-hidden"
             >
-              <Minus className="h-4 w-4" strokeWidth={2.5} />
-            </button>
-          </li>
-        ))}
-      </ul>
+              <motion.div
+                className="flex items-stretch gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 p-1.5 ring-1 ring-inset ring-slate-200/80 dark:border-zinc-800 dark:bg-black/25 dark:ring-zinc-800/40"
+                whileTap={{ backgroundColor: "rgba(45, 212, 191, 0.12)" }}
+                transition={springSnappy}
+              >
+                <input
+                  type="text"
+                  value={row.text}
+                  onChange={(e) => updateText(row.id, e.target.value)}
+                  disabled={disabled}
+                  placeholder="Tên sản phẩm / bước"
+                  className={cn(
+                    "sk-input-focus-ring min-h-10 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1.5 text-sm text-slate-900",
+                    "placeholder:text-slate-400 focus:border-teal-500/40 dark:focus:border-teal-400/35",
+                    "dark:text-zinc-100 dark:placeholder:text-zinc-600",
+                    "disabled:opacity-50",
+                  )}
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => remove(row.id)}
+                  disabled={disabled}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-zinc-700/80 dark:text-zinc-500 dark:hover:bg-red-950/50 dark:hover:text-red-400 disabled:opacity-40"
+                  aria-label="Xóa dòng"
+                >
+                  <Minus className="h-4 w-4" strokeWidth={2.5} />
+                </button>
+              </motion.div>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </motion.ul>
       <button
         type="button"
         onClick={add}
         disabled={disabled}
-        className="mt-2 flex w-full min-h-10 items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 text-xs font-semibold text-slate-500 transition hover:border-teal-400/80 hover:text-teal-700 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-teal-700/60 dark:hover:text-teal-400"
+        className="mt-2 flex w-full min-h-10 items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 text-xs font-semibold text-slate-500 transition-colors hover:border-teal-400/80 hover:text-teal-700 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-teal-700/60 dark:hover:text-teal-400"
       >
         <Plus className="h-4 w-4" />
         Thêm bước

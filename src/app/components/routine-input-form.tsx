@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Droplets,
   Sun,
+  Moon,
   Layers2,
   Shield,
   type LucideIcon,
@@ -34,6 +35,7 @@ import {
 import type { SkinTypeInput } from "@/types/routine-analysis";
 import { cn } from "@/lib/utils";
 import { InteractiveCard, MotionReveal, VibeButton, triggerHaptic } from "@/components/ui";
+import { springSnappy, springSoft, tweenTabIconBounce } from "@/components/ui/motion-spring";
 
 function isTransientAiCode(code?: string): boolean {
   return code === "RATE_LIMIT" || code === "UNAVAILABLE";
@@ -46,7 +48,7 @@ const SKIN_OPTIONS: { id: SkinTypeInput; label: string; Icon: LucideIcon }[] = [
   { id: "SENSITIVE", label: "Nhạy cảm", Icon: Shield },
 ];
 
-/** Tabs sáng/tối — chỉ hiển thị dưới 640px */
+/** Tabs sáng/tối — chỉ hiển thị dưới 640px; pill layoutId + icon nảy */
 function RoutineAmPmTabs({
   active,
   onChange,
@@ -56,41 +58,59 @@ function RoutineAmPmTabs({
   onChange: (t: "am" | "pm") => void;
   disabled?: boolean;
 }) {
+  const tabs = [
+    { id: "am" as const, label: "Buổi sáng (AM)", Icon: Sun },
+    { id: "pm" as const, label: "Buổi tối (PM)", Icon: Moon },
+  ];
   return (
     <div
-      className="mb-3 flex gap-1 rounded-2xl border border-slate-200/90 bg-slate-100/80 p-1 dark:border-zinc-700 dark:bg-zinc-900/60 sm:hidden"
+      className="relative mb-3 flex gap-1 rounded-2xl border border-slate-200/90 bg-slate-100/80 p-1 dark:border-zinc-700 dark:bg-zinc-900/60 sm:hidden"
       role="tablist"
       aria-label="Chọn buổi sáng hoặc tối"
     >
-      {(
-        [
-          { id: "am" as const, label: "Buổi sáng (AM)" },
-          { id: "pm" as const, label: "Buổi tối (PM)" },
-        ] as const
-      ).map((t) => (
-        <motion.button
-          key={t.id}
-          type="button"
-          role="tab"
-          aria-selected={active === t.id}
-          disabled={disabled}
-          whileTap={disabled ? undefined : { scale: 0.97 }}
-          transition={{ type: "spring", stiffness: 480, damping: 22 }}
-          onPointerDown={() => {
-            if (!disabled) triggerHaptic(10);
-          }}
-          onClick={() => onChange(t.id)}
-          className={cn(
-            "min-h-11 flex-1 rounded-xl px-3 py-2.5 text-center text-sm font-semibold transition-colors",
-            active === t.id
-              ? "bg-white text-teal-800 shadow-sm shadow-teal-900/10 ring-1 ring-teal-500/35 dark:bg-[#1a222c] dark:text-teal-100 dark:ring-teal-500/40"
-              : "text-slate-600 hover:bg-white/60 dark:text-zinc-400 dark:hover:bg-zinc-800/80",
-            "disabled:opacity-50",
-          )}
-        >
-          {t.label}
-        </motion.button>
-      ))}
+      {tabs.map((t) => {
+        const isActive = active === t.id;
+        const Icon = t.Icon;
+        return (
+          <motion.button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            disabled={disabled}
+            whileTap={disabled ? undefined : { scale: 0.97 }}
+            transition={springSnappy}
+            onClick={() => {
+              if (!disabled) {
+                triggerHaptic(10);
+                onChange(t.id);
+              }
+            }}
+            className={cn(
+              "relative min-h-11 flex-1 overflow-hidden rounded-xl px-2 py-2.5 text-center text-sm font-semibold transition-colors",
+              isActive ? "text-teal-900 dark:text-teal-50" : "text-slate-600 dark:text-zinc-400",
+              "disabled:opacity-50",
+            )}
+          >
+            {isActive ? (
+              <motion.span
+                layoutId="routine-am-pm-pill"
+                className="absolute inset-0 rounded-xl bg-white shadow-sm shadow-teal-900/10 ring-1 ring-teal-500/35 dark:bg-[#1a222c] dark:ring-teal-500/40"
+                transition={springSoft}
+              />
+            ) : null}
+            <motion.span
+              className="relative z-10 inline-flex items-center justify-center gap-1.5"
+              initial={false}
+              animate={isActive ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+              transition={isActive ? tweenTabIconBounce : { type: "tween", duration: 0.12, ease: "easeOut" }}
+            >
+              <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              <span className="leading-tight">{t.label}</span>
+            </motion.span>
+          </motion.button>
+        );
+      })}
     </div>
   );
 }
@@ -241,12 +261,9 @@ export function RoutineInputForm() {
 
   // Plus Jakarta Sans (body) + monospace chỉ khi cần — dùng sans cho toàn form
   const taClass = cn(
-    "min-h-[140px] w-full resize-y rounded-xl border px-3 py-3 font-sans text-sm leading-relaxed",
+    "sk-input-focus-ring min-h-[140px] w-full resize-y rounded-xl border px-3 py-3 font-sans text-sm leading-relaxed",
     "border-slate-200 bg-white text-slate-900 placeholder:text-slate-400",
     "shadow-inner outline-none transition-[border-color,box-shadow] duration-200",
-    "focus:border-teal-500 dark:focus:border-teal-400",
-    "focus:shadow-[0_0_0_3px_rgba(45,212,191,0.22),0_10px_28px_-10px_rgba(13,148,136,0.38)]",
-    "dark:focus:shadow-[0_0_0_3px_rgba(45,212,191,0.18),0_12px_32px_-12px_rgba(34,211,172,0.25)]",
     "dark:border-slate-700 dark:bg-[#141820] dark:text-slate-100 dark:placeholder:text-slate-600",
     "disabled:cursor-not-allowed disabled:opacity-60",
   );

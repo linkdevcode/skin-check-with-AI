@@ -3,7 +3,10 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { springSnappy } from "@/components/ui/motion-spring";
+import { triggerHaptic } from "@/components/ui";
 import { MultiAngleFaceFlow } from "@/app/components/multi-angle-face-flow";
 import { createSkinDiaryEntryAction } from "@/actions/skin-diary";
 import type { SkinEntryListItem } from "@/types/skin-diary";
@@ -74,7 +77,7 @@ export function SkinDiaryView({ initialEntries }: Props) {
           onChange={(e) => setNote(e.target.value)}
           placeholder="Ví dụ: sau tuần dùng BHA…"
           disabled={busy}
-          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-white"
+          className="sk-input-focus-ring mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-[border-color,box-shadow] dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-white"
         />
         <div className="relative mt-4">
           {busy ? (
@@ -151,36 +154,57 @@ export function SkinDiaryView({ initialEntries }: Props) {
                   {dayLabel}
                 </p>
                 <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4" role="list">
-                  {items.map((it) => (
-                    <li
-                      key={it.id}
-                      className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-zinc-800 dark:bg-zinc-900/60"
-                    >
-                      <Link href={`/nhat-ky-da/${it.id}`} className="block aspect-square">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={it.imageUrlFront}
-                          alt=""
-                          className="h-full w-full object-cover transition group-hover:opacity-95"
-                          loading="lazy"
-                        />
-                      </Link>
-                      {it.imageUrlLeft && it.imageUrlRight ? (
-                        <span className="absolute left-1 top-1 rounded bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white backdrop-blur-sm">
-                          3 góc
-                        </span>
-                      ) : null}
-                      {it.analysisResult.comparedWithEntryId &&
-                      it.analysisResult.comparedWithEntryId !== it.id ? (
-                        <Link
-                          href={`/nhat-ky-da/so-sanh?before=${it.analysisResult.comparedWithEntryId}&after=${it.id}`}
-                          className="absolute bottom-1 right-1 rounded-md bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
+                  <AnimatePresence mode="popLayout">
+                    {items.map((it, itemIndex) => (
+                      <motion.li
+                        key={it.id}
+                        layout
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          transition: { ...springSnappy, delay: itemIndex * 0.05 },
+                        }}
+                        exit={{ opacity: 0, y: -6, transition: springSnappy }}
+                        className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-zinc-800 dark:bg-zinc-900/60"
+                      >
+                        <motion.div
+                          whileTap={{ backgroundColor: "rgba(45, 212, 191, 0.12)" }}
+                          transition={springSnappy}
+                          className="relative aspect-square"
                         >
-                          So sánh
-                        </Link>
-                      ) : null}
-                    </li>
-                  ))}
+                          <Link
+                            href={`/nhat-ky-da/${it.id}`}
+                            className="block h-full w-full"
+                            onClick={() => triggerHaptic(10)}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={it.imageUrlFront}
+                              alt=""
+                              className="h-full w-full object-cover transition group-hover:opacity-95"
+                              loading="lazy"
+                            />
+                          </Link>
+                          {it.imageUrlLeft && it.imageUrlRight ? (
+                            <span className="pointer-events-none absolute left-1 top-1 rounded bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white backdrop-blur-sm">
+                              3 góc
+                            </span>
+                          ) : null}
+                          {it.analysisResult.comparedWithEntryId &&
+                          it.analysisResult.comparedWithEntryId !== it.id ? (
+                            <Link
+                              href={`/nhat-ky-da/so-sanh?before=${it.analysisResult.comparedWithEntryId}&after=${it.id}`}
+                              className="absolute bottom-1 right-1 rounded-md bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
+                              onClick={() => triggerHaptic(10)}
+                            >
+                              So sánh
+                            </Link>
+                          ) : null}
+                        </motion.div>
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
                 </ul>
               </div>
             ))}
