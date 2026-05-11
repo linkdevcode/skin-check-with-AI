@@ -9,7 +9,7 @@ export type SkinAnalysisTriplet = { front: string; left: string; right: string }
 
 const STEPS_VI = [
   { title: "Mặt trước", hint: "Nhìn thẳng camera, đủ sáng, cả khuôn mặt." },
-  { title: "Góc trái", hint: "Quay ~45° để lộ má trái của bạn (bên trái khuôn mặt khi nhìn vào gương)." },
+  { title: "Góc trái", hint: "Quay ~45° để lộ má trái của bạn." },
   { title: "Góc phải", hint: "Quay ~45° để lộ má phải của bạn." },
 ] as const;
 

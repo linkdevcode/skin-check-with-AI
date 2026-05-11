@@ -16,11 +16,11 @@ const STEPS_VI = [
   { title: "Mặt trước", hint: "Nhìn thẳng camera, đủ sáng, cả khuôn mặt." },
   {
     title: "Góc trái",
-    hint: "Tuỳ chọn — quay ~45° để lộ má trái. Có thể bỏ qua: mũi tên phải sang bước tiếp theo.",
+    hint: "Tuỳ chọn — quay ~45° để lộ má trái.",
   },
   {
     title: "Góc phải",
-    hint: "Tuỳ chọn — quay ~45° để lộ má phải. Chỉ cần đủ ảnh mặt trước là có thể bấm «Bắt đầu phân tích».",
+    hint: "Tuỳ chọn — quay ~45° để lộ má phải.",
   },
 ] as const;
 

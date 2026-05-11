@@ -14,9 +14,6 @@ export function AnonymousSkinNotice({ callbackPath }: Props) {
       <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
       <div className="space-y-1.5 leading-snug">
         <p className="font-semibold">Đăng nhập để lưu kết quả và xem lại ở mọi thiết bị.</p>
-        <Link href={loginHref} className="underline underline-offset-2 hover:opacity-80">
-          Đăng nhập ngay →
-        </Link>
       </div>
     </div>
   );
