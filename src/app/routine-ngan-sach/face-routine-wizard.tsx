@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 import { Loader2, Sparkles, Wallet } from "lucide-react";
-import { MultiAngleFaceFlow, type CapturedTriplet } from "@/app/components/multi-angle-face-flow";
+import { SkinAnalysisUpload, type SkinAnalysisTriplet } from "@/app/components/skin-analysis-upload";
+import { toastServerActionFailure } from "@/lib/ai/toast-action-error";
+import { isAiStructuredActionError } from "@/lib/ai/structured-errors";
 import { RoutineBudgetDashboard } from "@/app/components/routine-budget-dashboard";
 import {
   BudgetRoutineResultView,
@@ -43,14 +45,21 @@ export function FaceRoutineWizard({ isLoggedIn }: WizardProps) {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [routine, setRoutine] = useState<SavedRoutineGenResult | null>(null);
   const [captureKey, setCaptureKey] = useState(0);
+  /** Ảnh mặt trước cho luồng chấm điểm / routine ngân sách (tách biệt nhật ký da). */
+  const [analysisFrontImage, setAnalysisFrontImage] = useState<string | null>(null);
 
-  const runAnalyzeTriple = useCallback(async (tri: CapturedTriplet) => {
+  const runAnalyzeTriple = useCallback(async (tri: SkinAnalysisTriplet) => {
+    if (!tri.front?.trim()) {
+      setMsg("Cần chụp ảnh mặt trước để tiếp tục.");
+      return;
+    }
     if (!tri.left?.trim() || !tri.right?.trim()) return;
     setMsg(null);
     setStep("processing");
     const an = await analyzeFaceRoutineAction(tri.front, tri.left, tri.right);
     if (!an.ok) {
-      setMsg(an.error);
+      toastServerActionFailure(an);
+      setMsg(isAiStructuredActionError(an) ? an.message : an.error);
       setStep("capture");
       setCaptureKey((k) => k + 1);
       return;
@@ -60,7 +69,7 @@ export function FaceRoutineWizard({ isLoggedIn }: WizardProps) {
     setStep("scores");
   }, []);
 
-  const onAnglesComplete = (tri: CapturedTriplet) => {
+  const onAnglesComplete = (tri: SkinAnalysisTriplet) => {
     startTransition(() => {
       void runAnalyzeTriple(tri);
     });
@@ -128,6 +137,7 @@ export function FaceRoutineWizard({ isLoggedIn }: WizardProps) {
     setBudgetInput("");
     setSavedId(null);
     setRoutine(null);
+    setAnalysisFrontImage(null);
     setCaptureKey((k) => k + 1);
   };
 
@@ -158,17 +168,20 @@ export function FaceRoutineWizard({ isLoggedIn }: WizardProps) {
       <StepTransition stepKey={flowKey} className="space-y-6">
         {!face ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Bước 1 — Ba góc mặt (bắt buộc)</h2>
+            <span className="sr-only">
+              {analysisFrontImage ? "Đã có ảnh mặt trước cho phân tích." : "Chưa có ảnh mặt trước."}
+            </span>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Phân tích da — cần đủ 3 ảnh (mặt trước, góc trái, góc phải)
+            </h2>
             <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
-              Thứ tự: mặt trước → góc trái → góc phải (theo người trong ảnh). Ánh sáng đều, cả khuôn mặt. Thanh quét chỉ là
-              hiệu ứng giao diện.
+              Tải ảnh theo từng bước bằng mũi tên. Khi đủ 3 ảnh, bấm «Bắt đầu phân tích».
             </p>
-            <MultiAngleFaceFlow
+            <SkinAnalysisUpload
               key={captureKey}
               className="mt-4"
-              minAngles={3}
-              scope="face-scan"
               disabled={busy}
+              onFrontImageChange={setAnalysisFrontImage}
               onComplete={onAnglesComplete}
             />
           </section>

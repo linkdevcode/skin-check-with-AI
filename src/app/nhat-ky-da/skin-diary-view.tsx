@@ -8,7 +8,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { tweenEnter, tweenExit, tweenTap } from "@/components/ui/motion-spring";
 import { triggerHaptic } from "@/components/ui";
-import { MultiAngleFaceFlow, type CapturedTriplet } from "@/app/components/multi-angle-face-flow";
+import { SkinDiaryUpload, type SkinDiaryUploadResult } from "@/app/components/skin-diary-upload";
+import { toastServerActionFailure } from "@/lib/ai/toast-action-error";
+import { isAiStructuredActionError } from "@/lib/ai/structured-errors";
 import { createSkinDiaryEntryAction } from "@/actions/skin-diary";
 import type { SkinEntryListItem } from "@/types/skin-diary";
 import { aggregateWeeklyImprovement } from "@/lib/skin-diary-chart";
@@ -36,6 +38,8 @@ export function SkinDiaryView({ initialEntries }: Props) {
   const [note, setNote] = useState("");
   const [flowKey, setFlowKey] = useState(0);
   const diarySubmitLock = useRef(false);
+  /** Ảnh mặt trước cho nhật ký (so sánh theo thời gian) — tách khỏi luồng phân tích / chấm điểm. */
+  const [diaryFrontImage, setDiaryFrontImage] = useState<string | null>(null);
 
   const chartData = useMemo(
     () =>
@@ -62,7 +66,11 @@ export function SkinDiaryView({ initialEntries }: Props) {
   const busy = submitting || pending;
 
   const handleDiaryComplete = useCallback(
-    (tri: CapturedTriplet) => {
+    (tri: SkinDiaryUploadResult) => {
+      if (!tri.front?.trim()) {
+        setMsg("Cần chụp ảnh mặt trước để tiếp tục.");
+        return;
+      }
       if (diarySubmitLock.current) return;
       diarySubmitLock.current = true;
       setMsg(null);
@@ -77,7 +85,8 @@ export function SkinDiaryView({ initialEntries }: Props) {
             userNote: noteTrim || null,
           });
           if (!cr.ok) {
-            setMsg(cr.error);
+            toastServerActionFailure(cr);
+            setMsg(isAiStructuredActionError(cr) ? cr.message : cr.error);
             return;
           }
           setNote("");
@@ -97,8 +106,8 @@ export function SkinDiaryView({ initialEntries }: Props) {
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Thêm ảnh mới</h2>
         <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
-          Ảnh mặt trước là bắt buộc; thêm góc trái &amp; phải nếu muốn (AI sẽ xử lý lâu hơn). So sánh với ảnh gần nhất
-          (Gemini Vision).
+          Ba bước giống phân tích da: mặt trước (bắt buộc), góc trái/phải tuỳ chọn — dùng mũi tên hai bên khung ảnh để
+          chuyển bước (có thể bỏ qua góc nghiêng). Bấm «Bắt đầu phân tích» khi đã có ảnh mặt trước.
         </p>
         <label className="mt-3 block text-xs font-medium text-slate-600 dark:text-zinc-400">
           Ghi chú (tuỳ chọn)
@@ -112,6 +121,9 @@ export function SkinDiaryView({ initialEntries }: Props) {
           className="sk-input-focus-ring mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-[border-color,box-shadow] dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-white"
         />
         <div className="relative mt-4">
+          <span className="sr-only">
+            {diaryFrontImage ? "Đã có ảnh mặt trước để lưu nhật ký." : "Chưa có ảnh mặt trước."}
+          </span>
           {busy ? (
             <div
               className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl bg-white/80 backdrop-blur-sm dark:bg-[#0b0e14]/75"
@@ -122,11 +134,10 @@ export function SkinDiaryView({ initialEntries }: Props) {
               <p className="px-4 text-center text-xs font-medium text-slate-700 dark:text-zinc-200">Đang phân tích…</p>
             </div>
           ) : null}
-          <MultiAngleFaceFlow
+          <SkinDiaryUpload
             key={flowKey}
-            minAngles={1}
-            scope="skin-diary"
             disabled={busy}
+            onFrontImageChange={setDiaryFrontImage}
             onComplete={handleDiaryComplete}
           />
         </div>

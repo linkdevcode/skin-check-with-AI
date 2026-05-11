@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +10,8 @@ export const metadata: Metadata = {
   title: "Nhật ký da",
   description: "Theo dõi ảnh da theo ngày, so sánh Before/After và biểu đồ cải thiện.",
 };
+
+export const maxDuration = 30;
 
 export default async function NhatKyDaPage() {
   const session = await auth();
@@ -50,14 +51,9 @@ export default async function NhatKyDaPage() {
         <header className="mb-6 mt-1">
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Nhật ký da</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Lưu ảnh lên Blob, phân tích Gemini Vision và xem xu hướng theo tuần.
+            Bước 1: Chụp ảnh mặt trước (bắt buộc). AI cần ảnh này để so sánh với các mốc thời gian khác; thêm góc phụ
+            nếu muốn.
           </p>
-          <Link
-            href="/routine"
-            className="mt-3 inline-block text-sm font-medium text-teal-600 hover:text-teal-500 dark:text-teal-400"
-          >
-            → Phân tích routine skincare
-          </Link>
         </header>
         <SkinDiaryView initialEntries={initialEntries} />
       </div>

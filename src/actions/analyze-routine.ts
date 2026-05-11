@@ -3,6 +3,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { analyzeTextAction } from "@/lib/ai-provider";
+import { userMessageFromAiPayload } from "@/lib/ai/messages";
+import { isAiStructuredActionError, type AiStructuredActionError } from "@/lib/ai/structured-errors";
 import { GeminiAnalysisError } from "@/lib/gemini";
 import type { AcneSafety, ConflictItem, SkinTypeInput } from "@/types/routine-analysis";
 import { Prisma, SkinType } from "@prisma/client";
@@ -20,11 +22,9 @@ export type AnalyzeRoutineSuccess = {
   saved: boolean;
 };
 
-export type AnalyzeRoutineFailure = {
-  ok: false;
-  error: string;
-  code?: string;
-};
+export type AnalyzeRoutineFailure =
+  | { ok: false; error: string; code?: string }
+  | AiStructuredActionError;
 
 export type AnalyzeRoutineResult = AnalyzeRoutineSuccess | AnalyzeRoutineFailure;
 
@@ -118,6 +118,16 @@ export async function analyzeRoutine(
 
   try {
     const result = await analyzeTextAction(routineText, skinType);
+    if (isAiStructuredActionError(result)) {
+      return result;
+    }
+    if ("error" in result) {
+      return {
+        ok: false,
+        error: userMessageFromAiPayload(result.error, "Văn bản"),
+        code: "AI_GATEWAY",
+      };
+    }
     const conflicts = mapConflicts(result.conflicts);
     const acneSafety = toAcneSafety(result.acneSafety);
 

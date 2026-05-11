@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { triggerHaptic } from "./haptic";
 import { useCanHover } from "./use-can-hover";
 import { useCoarsePointerOrNarrow } from "./use-coarse-pointer";
-import { springBouncy, springSnappy, tweenEnter, tweenTap } from "./motion-spring";
+import { springSnappy, tweenEnter, tweenTap } from "./motion-spring";
 
 export type InteractiveCardProps = Omit<HTMLMotionProps<"button">, "children"> & {
   children: React.ReactNode;
@@ -24,11 +24,15 @@ const InteractiveCardInner = forwardRef<HTMLButtonElement, InteractiveCardProps>
   const canHover = useCanHover();
   const coarse = useCoarsePointerOrNarrow();
   const tapTransition = useMemo(() => (coarse ? tweenTap : springSnappy), [coarse]);
-  const checkTransition = useMemo(() => (coarse ? tweenEnter : springBouncy), [coarse]);
+  const checkTransition = tweenEnter;
 
   /** Chỉ transform — không animate border (tránh repaint nặng trên mobile) */
   const hoverMotion =
-    canHover && !disabled && !selected ? { scale: 1.02, transition: tapTransition } : undefined;
+    canHover && !disabled && !selected
+      ? coarse
+        ? { opacity: 0.96, transition: tapTransition }
+        : { scale: 1.02, transition: tapTransition }
+      : undefined;
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {

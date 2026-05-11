@@ -25,6 +25,8 @@ import { AiProcessingOverlay } from "./ai-processing-overlay";
 import { PageBackBar } from "./page-back-bar";
 import { analyzeRoutine } from "@/actions/analyze-routine";
 import { extractRoutineProductsAction } from "@/actions/extract-routine-products";
+import { toastServerActionFailure } from "@/lib/ai/toast-action-error";
+import { isAiStructuredActionError } from "@/lib/ai/structured-errors";
 import { formatRoutineForAnalysis } from "@/lib/routine-format";
 import { saveRoutineResult } from "@/lib/routine-result-storage";
 import {
@@ -170,8 +172,14 @@ export function RoutineInputForm() {
     try {
       const res = await extractRoutineProductsAction(amText, pmText);
       if (!res.ok) {
-        setReviewError(res.error);
-        setReviewErrorCode(res.code);
+        toastServerActionFailure(res);
+        if (isAiStructuredActionError(res)) {
+          setReviewError(res.message);
+          setReviewErrorCode(String(res.code));
+        } else {
+          setReviewError(res.error);
+          setReviewErrorCode(res.code);
+        }
         return;
       }
       setMorningRows(rowsFromStrings(res.morning));
@@ -226,8 +234,14 @@ export function RoutineInputForm() {
     try {
       const res = await analyzeRoutine(routineText, skinType);
       if (!res.ok) {
-        setError(res.error);
-        setErrorCode(res.code);
+        toastServerActionFailure(res);
+        if (isAiStructuredActionError(res)) {
+          setError(res.message);
+          setErrorCode(String(res.code));
+        } else {
+          setError(res.error);
+          setErrorCode(res.code);
+        }
         return;
       }
 

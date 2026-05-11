@@ -1,9 +1,10 @@
 import type { Transition } from "framer-motion";
 
 /** Spring desktop — giữ độ nảy vừa phải */
-export const springSnappy = { type: "spring" as const, stiffness: 520, damping: 28, mass: 0.85 };
-export const springSoft = { type: "spring" as const, stiffness: 380, damping: 26, mass: 0.9 };
-export const springBouncy = { type: "spring" as const, stiffness: 420, damping: 18, mass: 0.75 };
+export const springSnappy = { type: "spring" as const, stiffness: 520, damping: 32, mass: 0.85, bounce: 0 };
+/** Spring — bounce thấp; trên mobile ưu tiên tween trong component. */
+export const springSoft = { type: "spring" as const, stiffness: 380, damping: 32, mass: 0.9, bounce: 0 };
+export const springBouncy = { type: "spring" as const, stiffness: 420, damping: 28, mass: 0.75, bounce: 0 };
 
 /** Tween ngắn — ưu tiên mobile / giảm CPU */
 export const tweenTap: Transition = { type: "tween", duration: 0.18, ease: "easeOut" };

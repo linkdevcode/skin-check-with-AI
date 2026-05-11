@@ -354,7 +354,7 @@ ${trimmed}
   }
 }
 
-/** @deprecated Dùng analyzeTextAction từ @/lib/ai-provider. */
+/** @deprecated Dùng analyzeTextAction từ @/lib/ai-provider (Groq-only, trả { error } khi lỗi). */
 export async function analyzeWithGemini(
   routineText: string,
   skinType: SkinTypeInput,

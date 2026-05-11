@@ -1,6 +1,8 @@
 import type { SkinTypeInput } from "@/types/routine-analysis";
 import {
   GeminiAnalysisError,
+  geminiAnalyzeRoutineOnce,
+  geminiExtractRoutineProductsOnce,
   type RoutineAnalysisJson,
   type RoutineProductsExtract,
   ROUTINE_ALYSIS_JSON_SHAPE_NOTE,
@@ -8,12 +10,12 @@ import {
   ROUTINE_SKIN_LABEL_VI,
   ROUTINE_SKIN_TYPE_SET,
   EXTRACT_ROUTINE_PRODUCTS_INSTRUCTION,
-  geminiAnalyzeRoutineOnce,
-  geminiExtractRoutineProductsOnce,
   parseRoutineAnalysisJson,
   parseRoutineProductsExtractJson,
 } from "@/lib/gemini";
 import { withTransientAiRetries } from "@/lib/ai-retry";
+import { AI_GATE_RATE_LIMIT_PAYLOAD, type AiGatewayErrorPayload } from "@/lib/ai/messages";
+import { AI_GROQ_TEXT_BUSY_ERROR, type AiStructuredActionError } from "@/lib/ai/structured-errors";
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -31,14 +33,23 @@ function getGroqApiKey(): string | null {
   return k || null;
 }
 
-async function groqChatCompletionJson(options: {
+class GroqAiPayloadError extends Error {
+  constructor(readonly payload: AiGatewayErrorPayload) {
+    super(payload.error);
+    this.name = "GroqAiPayloadError";
+  }
+}
+
+async function groqChatCompletionJsonOrThrow(options: {
   system: string;
   user: string;
   temperature: number;
   maxCompletionTokens: number;
 }): Promise<string> {
   const key = getGroqApiKey();
-  if (!key) throw new Error("GROQ_SKIP");
+  if (!key) {
+    throw new GroqAiPayloadError({ error: "GROQ_API_KEY is not configured." });
+  }
 
   const res = await fetch(GROQ_URL, {
     method: "POST",
@@ -58,16 +69,22 @@ async function groqChatCompletionJson(options: {
     }),
   });
 
+  const text = await res.text();
+  if (res.status === 429) {
+    throw new GroqAiPayloadError({ error: AI_GATE_RATE_LIMIT_PAYLOAD });
+  }
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Groq HTTP ${res.status}: ${text.slice(0, 400)}`);
+    throw new GroqAiPayloadError({ error: `Groq HTTP ${res.status}: ${text.slice(0, 400)}` });
   }
 
-  const data = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string | null } }>;
-  };
+  let data: { choices?: Array<{ message?: { content?: string | null } }> };
+  try {
+    data = JSON.parse(text) as { choices?: Array<{ message?: { content?: string | null } }> };
+  } catch {
+    throw new GroqAiPayloadError({ error: "Groq: invalid JSON body" });
+  }
   const content = data.choices?.[0]?.message?.content;
-  if (!content?.trim()) throw new Error("Groq: empty content");
+  if (!content?.trim()) throw new GroqAiPayloadError({ error: "Groq: empty content" });
   return stripJsonFence(content);
 }
 
@@ -96,14 +113,15 @@ function assertExtractInput(morningText: string, eveningText: string): void {
   }
 }
 
+export type AnalyzeTextActionResult = RoutineAnalysisJson | AiGatewayErrorPayload | AiStructuredActionError;
+
 /**
- * Phân tích routine (văn bản): Groq llama-3.3-70b-versatile trước; lỗi / quá tải → Gemini 2.5 Flash.
- * Retry 429: 2s, 4s, 8s (withTransientAiRetries) trên từng lần gọi provider.
+ * Phân tích routine (văn bản): Groq llama-3.3-70b, fallback Gemini khi Groq lỗi.
  */
 export async function analyzeTextAction(
   routineText: string,
   skinType: SkinTypeInput,
-): Promise<RoutineAnalysisJson> {
+): Promise<AnalyzeTextActionResult> {
   const trimmed = assertRoutineTextInput(routineText, skinType);
   const skinLabel = ROUTINE_SKIN_LABEL_VI[skinType];
 
@@ -119,32 +137,44 @@ ${trimmed}
 
 ${ROUTINE_ALYSIS_JSON_SHAPE_NOTE}`;
 
-  if (getGroqApiKey()) {
-    try {
-      const raw = await withTransientAiRetries(() =>
-        groqChatCompletionJson({
-          system,
-          user,
-          temperature: 0.35,
-          maxCompletionTokens: 4096,
-        }),
-      );
-      return parseRoutineAnalysisJson(raw);
-    } catch {
-      /* fallback Gemini */
+  let raw: string;
+  try {
+    raw = await withTransientAiRetries(() =>
+      groqChatCompletionJsonOrThrow({
+        system,
+        user,
+        temperature: 0.35,
+        maxCompletionTokens: 4096,
+      }),
+    );
+  } catch (e) {
+    if (e instanceof GroqAiPayloadError) {
+      try {
+        return await withTransientAiRetries(() => geminiAnalyzeRoutineOnce(routineText, skinType));
+      } catch {
+        return AI_GROQ_TEXT_BUSY_ERROR;
+      }
     }
+    if (e instanceof GeminiAnalysisError) return { error: e.message };
+    return { error: e instanceof Error ? e.message : "Phân tích văn bản thất bại." };
   }
 
-  return withTransientAiRetries(() => geminiAnalyzeRoutineOnce(routineText, skinType));
+  try {
+    return parseRoutineAnalysisJson(raw);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "PARSE_ERROR" };
+  }
 }
 
+export type ExtractRoutineTextActionResult = RoutineProductsExtract | AiGatewayErrorPayload | AiStructuredActionError;
+
 /**
- * Tách sản phẩm routine (văn bản): Groq trước, fallback Gemini.
+ * Tách sản phẩm routine (văn bản): Groq, fallback Gemini khi Groq lỗi.
  */
 export async function extractRoutineTextAction(
   morningText: string,
   eveningText: string,
-): Promise<RoutineProductsExtract> {
+): Promise<ExtractRoutineTextActionResult> {
   assertExtractInput(morningText, eveningText);
   const am = morningText.trim();
   const pm = eveningText.trim();
@@ -154,21 +184,31 @@ export async function extractRoutineTextAction(
 
 Trả về đúng một object JSON: {"morning": string[], "evening": string[]} — không markdown, không giải thích ngoài JSON.`;
 
-  if (getGroqApiKey()) {
-    try {
-      const raw = await withTransientAiRetries(() =>
-        groqChatCompletionJson({
-          system,
-          user: userBlock,
-          temperature: 0.2,
-          maxCompletionTokens: 2048,
-        }),
-      );
-      return parseRoutineProductsExtractJson(raw);
-    } catch {
-      /* fallback */
+  let raw: string;
+  try {
+    raw = await withTransientAiRetries(() =>
+      groqChatCompletionJsonOrThrow({
+        system,
+        user: userBlock,
+        temperature: 0.2,
+        maxCompletionTokens: 2048,
+      }),
+    );
+  } catch (e) {
+    if (e instanceof GroqAiPayloadError) {
+      try {
+        return await withTransientAiRetries(() => geminiExtractRoutineProductsOnce(morningText, eveningText));
+      } catch {
+        return AI_GROQ_TEXT_BUSY_ERROR;
+      }
     }
+    if (e instanceof GeminiAnalysisError) return { error: e.message };
+    return { error: e instanceof Error ? e.message : "Tách routine thất bại." };
   }
 
-  return withTransientAiRetries(() => geminiExtractRoutineProductsOnce(morningText, eveningText));
+  try {
+    return parseRoutineProductsExtractJson(raw);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "PARSE_ERROR" };
+  }
 }

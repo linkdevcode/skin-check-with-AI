@@ -4,18 +4,17 @@ import { revalidatePath } from "next/cache";
 import { resolveSkinActorUserId } from "@/lib/skin-actor";
 import { prisma } from "@/lib/prisma";
 import { assertAllowedSkinImageUrl } from "@/lib/skin-blob-url";
-import {
-  analyzeFaceForRoutineBudgetTriple,
-  generateRoutineForBudget,
-  generateRoutineThreeTiers,
-  GeminiAnalysisError,
-} from "@/lib/gemini";
+import { analyzeImageAction } from "@/lib/ai/analyze-image-action";
+import { generateRoutineForBudget, generateRoutineThreeTiers, GeminiAnalysisError } from "@/lib/gemini";
+import { userMessageFromAiPayload, AI_GATE_RATE_LIMIT_PAYLOAD } from "@/lib/ai/messages";
+import { isAiStructuredActionError } from "@/lib/ai/structured-errors";
 import type { FaceRoutineAnalysis, SavedRoutineGenResult } from "@/types/face-routine-budget";
 import { Prisma } from "@prisma/client";
 
 export type AnalyzeFaceRoutineResult =
   | { ok: true; data: FaceRoutineAnalysis }
-  | { ok: false; error: string; code?: string };
+  | { ok: false; error: string; code?: string }
+  | { ok: false; status: "error"; code: number; message: string };
 
 export async function analyzeFaceRoutineAction(
   imageUrlFront: string,
@@ -27,8 +26,23 @@ export async function analyzeFaceRoutineAction(
     for (const u of [imageUrlFront, imageUrlLeft, imageUrlRight]) {
       assertAllowedSkinImageUrl(u);
     }
-    const data = await analyzeFaceForRoutineBudgetTriple(imageUrlFront, imageUrlLeft, imageUrlRight);
-    return { ok: true, data };
+    const vision = await analyzeImageAction({
+      kind: "face_routine_triple",
+      imageUrlFront,
+      imageUrlLeft,
+      imageUrlRight,
+    });
+    if (isAiStructuredActionError(vision)) {
+      return vision;
+    }
+    if ("error" in vision) {
+      return {
+        ok: false,
+        error: userMessageFromAiPayload(vision.error, "Ảnh"),
+        code: "AI_GATEWAY",
+      };
+    }
+    return { ok: true, data: vision.data };
   } catch (e) {
     if (e instanceof GeminiAnalysisError) {
       return { ok: false, error: e.message, code: e.code };
@@ -90,7 +104,11 @@ export async function generateAndSaveRoutineAction(
     }
   } catch (e) {
     if (e instanceof GeminiAnalysisError) {
-      return { ok: false, error: e.message, code: e.code };
+      const msg =
+        e.code === "RATE_LIMIT" || e.code === "UNAVAILABLE"
+          ? userMessageFromAiPayload(AI_GATE_RATE_LIMIT_PAYLOAD, "Văn bản")
+          : e.message;
+      return { ok: false, error: msg, code: e.code };
     }
     if (e instanceof Error) {
       return { ok: false, error: e.message };

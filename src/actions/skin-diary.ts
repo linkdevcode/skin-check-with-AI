@@ -10,11 +10,13 @@ import {
   compareSkinProgressAngles,
   GeminiAnalysisError,
 } from "@/lib/gemini";
+import { AI_VISION_BUSY_ERROR } from "@/lib/ai/structured-errors";
 import type { SkinDiaryAnalysisJson } from "@/types/skin-diary";
 
 export type CreateSkinEntryResult =
   | { ok: true; id: string }
-  | { ok: false; error: string; code?: string };
+  | { ok: false; error: string; code?: string }
+  | { ok: false; status: "error"; code: number; message: string };
 
 export async function createSkinDiaryEntryAction(input: {
   imageUrlFront: string;
@@ -75,6 +77,9 @@ export async function createSkinDiaryEntryAction(input: {
     }
   } catch (e) {
     if (e instanceof GeminiAnalysisError) {
+      if (e.code === "RATE_LIMIT" || e.code === "UNAVAILABLE") {
+        return AI_VISION_BUSY_ERROR;
+      }
       return { ok: false, error: e.message, code: e.code };
     }
     return { ok: false, error: e instanceof Error ? e.message : "Phân tích ảnh thất bại." };

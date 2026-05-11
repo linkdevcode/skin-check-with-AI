@@ -64,7 +64,7 @@ export default async function RoutineNganSachLichSuPage() {
             <div className="mt-6">
               <Link
                 href="/routine-ngan-sach"
-                className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-teal-600 px-6 font-semibold text-white hover:bg-teal-500"
+                className="sk-touch-manipulation inline-flex min-h-12 items-center justify-center rounded-2xl bg-teal-600 px-6 font-semibold text-white hover:bg-teal-500"
               >
                 Bắt đầu phân tích
               </Link>

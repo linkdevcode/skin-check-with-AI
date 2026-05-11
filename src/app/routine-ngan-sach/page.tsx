@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
+export const maxDuration = 30;
+
 export default async function RoutineNganSachPage() {
   const session = await auth();
   const isLoggedIn = Boolean(session?.user?.id);
@@ -27,7 +29,8 @@ export default async function RoutineNganSachPage() {
             Phân tích da &amp; gợi ý routine
           </h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Chọn ảnh mặt (3 góc) → điểm số → routine theo ngân sách hoặc 3 gói (Tiết kiệm / Hiệu quả / Cao cấp).
+            Bước 1: Chụp ảnh mặt trước (bắt buộc) — 2 ảnh trái phải tuỳ chọn để AI chấm điểm chính xác hơn; sau đó điểm
+            số và routine theo ngân sách hoặc 3 gói.
           </p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
             {isLoggedIn ? (

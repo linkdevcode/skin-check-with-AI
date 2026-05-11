@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: "Dán routine sáng/tối, rà soát và phân tích với SkinCheck AI.",
 };
 
+export const maxDuration = 30;
+
 export default function RoutinePage() {
   return <RoutineInputForm />;
 }

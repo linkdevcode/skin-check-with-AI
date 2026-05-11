@@ -39,7 +39,11 @@ export const VibeButton = forwardRef<HTMLButtonElement, VibeButtonProps>(functio
   );
 
   const hoverMotion =
-    canHover && !disabled ? { y: -2, transition: hoverTransition } : undefined;
+    canHover && !disabled
+      ? coarse
+        ? { opacity: 0.96, transition: hoverTransition }
+        : { y: -2, transition: hoverTransition }
+      : undefined;
   const tapMotion = disabled ? undefined : { scale: 0.96, opacity: 0.9, transition: tapTransition };
 
   return (

@@ -41,7 +41,9 @@ export function VibeLink({ className, children, onClick, ...props }: VibeLinkPro
         coarse && "sk-will-change-transform",
         className,
       )}
-      whileHover={canHover ? { y: -2, transition: hoverTransition } : undefined}
+      whileHover={
+        canHover ? (coarse ? { opacity: 0.96, transition: hoverTransition } : { y: -2, transition: hoverTransition }) : undefined
+      }
       whileTap={{ scale: 0.96, opacity: 0.9, transition: tapTransition }}
       transition={hoverTransition}
       onClick={handleClick}

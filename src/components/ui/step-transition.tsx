@@ -3,11 +3,19 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { tweenEnter, tweenExit } from "./motion-spring";
+import { useCoarsePointerOrNarrow } from "./use-coarse-pointer";
 
-const fadeSlide = {
+const fadeSlideFull = {
   initial: { opacity: 0, y: 18 },
   animate: { opacity: 1, y: 0, transition: tweenEnter },
   exit: { opacity: 0, y: -12, transition: tweenExit },
+};
+
+/** Mobile: chỉ opacity + transform nhẹ (y ngắn) để giảm lag */
+const fadeSlideCoarse = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0, transition: tweenEnter },
+  exit: { opacity: 0, y: -6, transition: tweenExit },
 };
 
 type StepTransitionProps = {
@@ -18,6 +26,9 @@ type StepTransitionProps = {
 };
 
 export function StepTransition({ stepKey, className, children }: StepTransitionProps) {
+  const coarse = useCoarsePointerOrNarrow();
+  const fadeSlide = coarse ? fadeSlideCoarse : fadeSlideFull;
+
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -44,6 +55,10 @@ type MotionRevealProps = {
 
 /** Panel xuất hiện lần đầu (fade + slide từ dưới), ẩn có exit */
 export function MotionReveal({ show, className, children }: MotionRevealProps) {
+  const coarse = useCoarsePointerOrNarrow();
+  const yEnter = coarse ? 12 : 22;
+  const yExit = coarse ? -6 : -10;
+
   return (
     <AnimatePresence>
       {show ? (
@@ -51,9 +66,9 @@ export function MotionReveal({ show, className, children }: MotionRevealProps) {
           key="reveal"
           layout={false}
           className={cn("sk-will-change-transform", className)}
-          initial={{ opacity: 0, y: 22 }}
+          initial={{ opacity: 0, y: yEnter }}
           animate={{ opacity: 1, y: 0, transition: tweenEnter }}
-          exit={{ opacity: 0, y: -10, transition: tweenExit }}
+          exit={{ opacity: 0, y: yExit, transition: tweenExit }}
         >
           {children}
         </motion.div>
