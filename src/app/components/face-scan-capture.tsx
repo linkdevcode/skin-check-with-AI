@@ -20,7 +20,6 @@ type Props = {
   disabled?: boolean;
   showScanLine?: boolean;
   navArrows?: FaceFrameNavArrows | null;
-  dots?: { count: number; index: number } | null;
   className?: string;
 };
 
@@ -36,7 +35,6 @@ export function FaceScanCapture({
   disabled,
   showScanLine,
   navArrows,
-  dots,
   className,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,99 +76,82 @@ export function FaceScanCapture({
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Mũi tên nằm ngoài khung ảnh để không che chi tiết. Mobile: hiển thị mũi tên (touch target lớn). */}
-      <div className="mx-auto w-full max-w-[min(100%,420px)]">
-        <div className="grid grid-cols-[44px_1fr_44px] items-center gap-5 px-5 max-md:grid-cols-[56px_1fr_56px] max-md:px-6">
-          <div className="flex items-center justify-center">
-            {navArrows?.showLeft ? (
-              <motion.button
+      {/*
+        Layout: [btn-prev 40px] [ảnh flex-1] [btn-next 40px]
+        Mũi tên nằm bên ngoài khung ảnh, không che chi tiết da.
+        Ảnh tự co theo chiều rộng màn hình — không cứng w-[280px].
+      */}
+      <div className="flex items-center gap-2">
+        {/* Mũi tên trái — luôn chiếm 40px để layout ổn định */}
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+          {navArrows?.showLeft ? (
+            <motion.button
+              type="button"
+              disabled={disabled}
+              whileTap={disabled ? undefined : tapMotion}
+              onClick={(e) => {
+                e.stopPropagation();
+                navArrows.onPrev();
+              }}
+              className="sk-touch-manipulation flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:active:bg-zinc-800"
+              aria-label="Xem bước ảnh trước"
+            >
+              <ChevronLeft className="h-5 w-5" aria-hidden />
+            </motion.button>
+          ) : null}
+        </div>
+
+        {/* Khung ảnh — flex-1 tự co theo màn hình */}
+        <div className="relative min-w-0 flex-1">
+          <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-900/5 shadow-inner dark:border-zinc-700 dark:bg-black/40">
+            {displaySrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={displaySrc}
+                alt="Xem trước"
+                className="h-full w-full select-none object-cover"
+                decoding="async"
+                fetchPriority="high"
+                draggable={false}
+              />
+            ) : (
+              <button
                 type="button"
                 disabled={disabled}
-                whileTap={disabled ? undefined : tapMotion}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navArrows.onPrev();
-                }}
-                className="sk-touch-manipulation flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900 max-md:min-h-[56px] max-md:min-w-[56px]"
-                aria-label="Xem bước ảnh trước"
+                onClick={openPicker}
+                className="sk-touch-manipulation flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-slate-600 dark:text-zinc-400"
               >
-                <ChevronLeft className="h-7 w-7 max-md:h-8 max-md:w-8" aria-hidden />
-              </motion.button>
-            ) : (
-              <div className="h-11 w-11 max-md:h-[56px] max-md:w-[56px]" aria-hidden />
+                <ImagePlus className="h-10 w-10 opacity-70" aria-hidden />
+                Chạm để chọn ảnh
+                <span className="text-xs text-slate-500 dark:text-zinc-500">Máy ảnh hoặc thư viện ảnh</span>
+              </button>
             )}
-          </div>
 
-          <motion.div
-            className="sk-touch-manipulation relative mx-auto w-[280px]"
-          >
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-900/5 shadow-inner dark:border-zinc-700 dark:bg-black/40">
-              {displaySrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={displaySrc}
-                  alt="Xem trước"
-                  className="h-full w-full select-none object-cover"
-                  decoding="async"
-                  fetchPriority="high"
-                  draggable={false}
-                />
-              ) : (
-                <button
-                  type="button"
-                  disabled={disabled}
-                  onClick={openPicker}
-                  className="sk-touch-manipulation flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-slate-600 dark:text-zinc-400"
-                >
-                  <ImagePlus className="h-10 w-10 opacity-70" aria-hidden />
-                  Chạm để chọn ảnh
-                  <span className="text-xs text-slate-500 dark:text-zinc-500">Máy ảnh hoặc thư viện ảnh</span>
-                </button>
-              )}
-
-              {showScanLine && displaySrc ? (
-                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-                  <div className="face-scan-sweep" />
-                </div>
-              ) : null}
-            </div>
-
-            {dots && dots.count > 1 ? (
-              <div className="mt-2 flex items-center justify-center gap-2 md:hidden" aria-hidden>
-                {Array.from({ length: dots.count }).map((_, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      "h-1.5 w-1.5 rounded-full transition",
-                      i === dots.index
-                        ? "bg-slate-900/55 dark:bg-white/55"
-                        : "bg-slate-900/12 dark:bg-white/12",
-                    )}
-                  />
-                ))}
+            {showScanLine && displaySrc ? (
+              <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+                <div className="face-scan-sweep" />
               </div>
             ) : null}
-          </motion.div>
-
-          <div className="flex items-center justify-center">
-            {navArrows?.showRight ? (
-              <motion.button
-                type="button"
-                disabled={disabled}
-                whileTap={disabled ? undefined : tapMotion}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navArrows.onNext();
-                }}
-                className="sk-touch-manipulation flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900 max-md:min-h-[56px] max-md:min-w-[56px]"
-                aria-label="Sang bước ảnh tiếp theo"
-              >
-                <ChevronRight className="h-7 w-7 max-md:h-8 max-md:w-8" aria-hidden />
-              </motion.button>
-            ) : (
-              <div className="h-11 w-11 max-md:h-[56px] max-md:w-[56px]" aria-hidden />
-            )}
           </div>
+        </div>
+
+        {/* Mũi tên phải — luôn chiếm 40px */}
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+          {navArrows?.showRight ? (
+            <motion.button
+              type="button"
+              disabled={disabled}
+              whileTap={disabled ? undefined : tapMotion}
+              onClick={(e) => {
+                e.stopPropagation();
+                navArrows.onNext();
+              }}
+              className="sk-touch-manipulation flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm active:bg-slate-100 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:active:bg-zinc-800"
+              aria-label="Sang bước ảnh tiếp theo"
+            >
+              <ChevronRight className="h-5 w-5" aria-hidden />
+            </motion.button>
+          ) : null}
         </div>
       </div>
 

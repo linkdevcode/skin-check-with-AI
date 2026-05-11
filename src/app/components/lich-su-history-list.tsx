@@ -47,7 +47,7 @@ function kindLabel(kind: LichSuHistoryRow["kind"]) {
     case "routine":
       return "Routine";
     case "da-ngan-sach":
-      return "Da & NS";
+      return "Da";
     case "nhat-ky-da":
       return "Nhật ký";
     default:

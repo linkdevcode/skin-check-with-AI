@@ -50,10 +50,6 @@ export default async function NhatKyDaPage() {
         <PageBackBar href="/">Về trang chủ</PageBackBar>
         <header className="mb-6 mt-1">
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Nhật ký da</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Bước 1: Chụp ảnh mặt trước (bắt buộc). AI cần ảnh này để so sánh với các mốc thời gian khác; thêm góc phụ
-            nếu muốn.
-          </p>
         </header>
         <SkinDiaryView initialEntries={initialEntries} />
       </div>

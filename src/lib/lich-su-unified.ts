@@ -77,7 +77,7 @@ export function mapRecommendedRoutineRow(row: {
     id: row.id,
     createdAt: row.createdAt,
     title: `${modeLabel}${budgetPart}`,
-    subtitle: `Da & ngân sách · ${skin}`,
+    subtitle: `Da & gợi ý routine · ${skin}`,
     href: `/routine-ngan-sach/${row.id}`,
     badge: routineBadgeFromResult(row.routineResult),
   };

@@ -18,7 +18,7 @@ const tabs: {
 }[] = [
   { loai: "tat-ca", label: "Tất cả", href: "/lich-su", Icon: LayoutGrid },
   { loai: "routine", label: "Routine", href: "/lich-su?loai=routine", Icon: Sparkles },
-  { loai: "da-ngan-sach", label: "Da & NS", href: "/lich-su?loai=da-ngan-sach", Icon: WalletCards },
+  { loai: "da-ngan-sach", label: "Da", href: "/lich-su?loai=da-ngan-sach", Icon: WalletCards },
   { loai: "nhat-ky-da", label: "Nhật ký", href: "/lich-su?loai=nhat-ky-da", Icon: BookHeart },
 ];
 

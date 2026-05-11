@@ -177,7 +177,7 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
         disabled={disabled || busy}
         showScanLine={busy}
         navArrows={navArrows}
-        dots={{ count: 3, index: stepIdx }}
+
       />
 
       <button

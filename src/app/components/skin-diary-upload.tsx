@@ -187,7 +187,7 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
         disabled={disabled || busy}
         showScanLine={busy}
         navArrows={navArrows}
-        dots={{ count: 3, index: stepIdx }}
+
       />
 
       <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 dark:border-amber-900/50 dark:bg-amber-950/35">
