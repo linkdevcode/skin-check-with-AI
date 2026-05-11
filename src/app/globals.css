@@ -137,3 +137,35 @@ html {
   border-left-color: #3f3f46;
   color: #a1a1aa;
 }
+
+/* Thanh quét AI trên preview ảnh (routine ngân sách) */
+@keyframes face-scan-sweep {
+  0%,
+  100% {
+    top: 6%;
+    opacity: 0.75;
+  }
+  50% {
+    top: 88%;
+    opacity: 1;
+  }
+}
+
+.face-scan-sweep {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(45, 212, 191, 0.15) 20%,
+    rgba(45, 212, 191, 0.95) 50%,
+    rgba(45, 212, 191, 0.15) 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 14px rgba(45, 212, 191, 0.55);
+  animation: face-scan-sweep 2.4s ease-in-out infinite;
+}
