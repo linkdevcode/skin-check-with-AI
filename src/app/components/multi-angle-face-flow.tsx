@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
-import { Check, ChevronRight, Info } from "lucide-react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { Check, Info } from "lucide-react";
 import { FaceScanCapture } from "@/app/components/face-scan-capture";
 import { uploadSkinImageAction } from "@/actions/upload-skin-image";
 import { cn } from "@/lib/utils";
@@ -41,10 +41,20 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
     left: null,
     right: null,
   });
-  /** Sau ảnh trước với minAngles=1: chờ user chọn có thêm góc hay không */
-  const [optionalChoice, setOptionalChoice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  const stepIdxRef = useRef(stepIdx);
+  useEffect(() => {
+    stepIdxRef.current = stepIdx;
+  }, [stepIdx]);
+
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  const uploadInFlightRef = useRef(false);
 
   const uploadFile = useCallback(async (file: File): Promise<string | null> => {
     const fd = new FormData();
@@ -60,20 +70,21 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
 
   const onFileReady = useCallback(
     async (file: File) => {
-      if (disabled || busy) return;
+      if (disabled || uploadInFlightRef.current) return;
+      uploadInFlightRef.current = true;
       setMsg(null);
       setBusy(true);
       try {
         const url = await uploadFile(file);
         if (!url) return;
-        const key = KEYS[stepIdx];
+        const key = KEYS[stepIdxRef.current];
 
         if (minAngles === 3) {
           if (key === "right") {
             setUrls((prev) => {
               const next = { ...prev, right: url };
               queueMicrotask(() =>
-                onComplete({
+                onCompleteRef.current({
                   front: next.front!,
                   left: next.left!,
                   right: next.right!,
@@ -91,7 +102,7 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
         // minAngles === 1
         if (key === "front") {
           setUrls((prev) => ({ ...prev, front: url }));
-          setOptionalChoice(true);
+          setStepIdx(1);
         } else if (key === "left") {
           setUrls((prev) => ({ ...prev, left: url }));
           setStepIdx(2);
@@ -99,7 +110,7 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
           setUrls((prev) => {
             const next = { ...prev, right: url };
             queueMicrotask(() =>
-              onComplete({
+              onCompleteRef.current({
                 front: next.front!,
                 left: next.left ?? null,
                 right: next.right!,
@@ -109,37 +120,32 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
           });
         }
       } finally {
+        uploadInFlightRef.current = false;
         setBusy(false);
       }
     },
-    [disabled, busy, stepIdx, minAngles, onComplete, uploadFile],
+    [disabled, minAngles, uploadFile],
   );
 
   const finishFrontOnly = () => {
     if (!urls.front) return;
-    onComplete({ front: urls.front, left: null, right: null });
-  };
-
-  const startOptionalSides = () => {
-    setOptionalChoice(false);
-    setStepIdx(1);
+    onCompleteRef.current({ front: urls.front, left: null, right: null });
   };
 
   const reset = () => {
     setStepIdx(0);
     setUrls({ front: null, left: null, right: null });
-    setOptionalChoice(false);
     setMsg(null);
   };
 
-  const showCapture = !optionalChoice && (minAngles === 3 || stepIdx === 0 || stepIdx >= 1);
+  const showCapture = minAngles === 3 || stepIdx === 0 || stepIdx >= 1;
 
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex gap-2" aria-hidden>
         {[0, 1, 2].map((i) => {
           const filled = urls[KEYS[i]] != null;
-          const active = !optionalChoice && stepIdx === i;
+          const active = stepIdx === i;
           return (
             <div
               key={i}
@@ -152,7 +158,7 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
         })}
       </div>
 
-      {minAngles === 1 && stepIdx === 0 && !optionalChoice ? (
+      {minAngles === 1 && stepIdx === 0 ? (
         <p className="text-xs font-medium text-teal-800 dark:text-teal-200">Bước 1 — Ảnh mặt trước (bắt buộc)</p>
       ) : null}
       {minAngles === 3 ? (
@@ -160,38 +166,8 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
           Bước {stepIdx + 1}/3 — {STEPS_VI[stepIdx].title}
         </p>
       ) : null}
-      {(minAngles === 3 || (minAngles === 1 && stepIdx > 0 && !optionalChoice)) && STEPS_VI[stepIdx] ? (
+      {(minAngles === 3 || (minAngles === 1 && stepIdx > 0)) && STEPS_VI[stepIdx] ? (
         <p className="text-xs text-slate-600 dark:text-zinc-400">{STEPS_VI[stepIdx].hint}</p>
-      ) : null}
-
-      {optionalChoice && minAngles === 1 ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 dark:border-amber-900/50 dark:bg-amber-950/35">
-          <div className="flex gap-2 text-xs text-amber-950 dark:text-amber-100">
-            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <p>
-              Thêm góc trái &amp; phải giúp AI đánh giá đều hai bên mặt, nhưng <strong>phân tích sẽ lâu hơn</strong> (gọi
-              nhiều ảnh hơn).
-            </p>
-          </div>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={finishFrontOnly}
-              className="sk-touch-manipulation inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-white"
-            >
-              <Check className="h-4 w-4" aria-hidden />
-              Chỉ dùng ảnh trước
-            </button>
-            <button
-              type="button"
-              onClick={startOptionalSides}
-              className="sk-touch-manipulation inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-500"
-            >
-              Thêm góc trái &amp; phải
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </button>
-          </div>
-        </div>
       ) : null}
 
       {showCapture ? (
@@ -201,6 +177,26 @@ export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
           disabled={disabled || busy}
           showScanLine={busy}
         />
+      ) : null}
+
+      {minAngles === 1 && stepIdx === 1 && urls.front && !urls.left ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-3 dark:border-amber-900/50 dark:bg-amber-950/35">
+          <div className="flex gap-2 text-xs text-amber-950 dark:text-amber-100">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <p>
+              Góc trái &amp; phải giúp AI đánh giá đều hai bên mặt, nhưng <strong>phân tích sẽ lâu hơn</strong>. Bạn có thể
+              bỏ qua nếu chỉ cần ảnh trước.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={finishFrontOnly}
+            className="sk-touch-manipulation mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-white"
+          >
+            <Check className="h-4 w-4" aria-hidden />
+            Chỉ gửi ảnh mặt trước (nhanh hơn)
+          </button>
+        </div>
       ) : null}
 
       {msg ? (

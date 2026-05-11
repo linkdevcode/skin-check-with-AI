@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s · SkinCheck AI",
   },
   description:
-    "Dán routine sáng và tối, nhận điểm số, cảnh báo xung đột hoạt chất, đánh giá an toàn da mụn và gợi ý thứ tự bôi thoa — tối ưu mobile, tiếng Việt.",
+    "Dán routine sáng và tối, nhận điểm số, cảnh báo xung đột hoạt chất, đánh giá an toàn da mụn và gợi ý thứ tự bôi thoa.",
   keywords: [
     "skincare",
     "routine",

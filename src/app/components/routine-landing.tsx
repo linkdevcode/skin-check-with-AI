@@ -112,7 +112,7 @@ export function RoutineLanding() {
                 "text-[clamp(0.875rem,1vw+0.6rem,1rem)] leading-relaxed",
               )}
             >
-              Gợi ý theo ngân sách, phân tích routine, hoặc nhật ký da qua ảnh — tối ưu mobile.
+              Phân tích da, phân tích routine và nhật ký chăm sóc da qua ảnh.
             </p>
           </div>
 
@@ -123,7 +123,7 @@ export function RoutineLanding() {
               </div>
               <h2 className={titleClass}>Phân tích da &amp; ngân sách</h2>
               <p className={descClass}>
-                Camera, điểm số AI và gợi ý routine theo ngân sách hoặc đề xuất 3 gói.
+                Camera, điểm số AI và gợi ý routine phù hợp.
               </p>
               <span className={budgetBtn}>Bắt đầu</span>
             </Link>
