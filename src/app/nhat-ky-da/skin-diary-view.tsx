@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import { springSnappy } from "@/components/ui/motion-spring";
+import { tweenEnter, tweenExit, tweenTap } from "@/components/ui/motion-spring";
 import { triggerHaptic } from "@/components/ui";
-import { MultiAngleFaceFlow } from "@/app/components/multi-angle-face-flow";
+import { MultiAngleFaceFlow, type CapturedTriplet } from "@/app/components/multi-angle-face-flow";
 import { createSkinDiaryEntryAction } from "@/actions/skin-diary";
 import type { SkinEntryListItem } from "@/types/skin-diary";
 import { aggregateWeeklyImprovement } from "@/lib/skin-diary-chart";
@@ -60,6 +61,37 @@ export function SkinDiaryView({ initialEntries }: Props) {
 
   const busy = submitting || pending;
 
+  const handleDiaryComplete = useCallback(
+    (tri: CapturedTriplet) => {
+      if (diarySubmitLock.current) return;
+      diarySubmitLock.current = true;
+      setMsg(null);
+      setSubmitting(true);
+      const noteTrim = note.trim();
+      startTransition(async () => {
+        try {
+          const cr = await createSkinDiaryEntryAction({
+            imageUrlFront: tri.front,
+            imageUrlLeft: tri.left ?? null,
+            imageUrlRight: tri.right ?? null,
+            userNote: noteTrim || null,
+          });
+          if (!cr.ok) {
+            setMsg(cr.error);
+            return;
+          }
+          setNote("");
+          setFlowKey((k) => k + 1);
+          router.refresh();
+        } finally {
+          setSubmitting(false);
+          diarySubmitLock.current = false;
+        }
+      });
+    },
+    [note, router],
+  );
+
   return (
     <div className="space-y-8 pb-10">
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#141820]/90">
@@ -95,32 +127,7 @@ export function SkinDiaryView({ initialEntries }: Props) {
             minAngles={1}
             scope="skin-diary"
             disabled={busy}
-            onComplete={(tri) => {
-              if (diarySubmitLock.current) return;
-              diarySubmitLock.current = true;
-              setMsg(null);
-              setSubmitting(true);
-              startTransition(async () => {
-                try {
-                  const cr = await createSkinDiaryEntryAction({
-                    imageUrlFront: tri.front,
-                    imageUrlLeft: tri.left ?? null,
-                    imageUrlRight: tri.right ?? null,
-                    userNote: note.trim() || null,
-                  });
-                  if (!cr.ok) {
-                    setMsg(cr.error);
-                    return;
-                  }
-                  setNote("");
-                  setFlowKey((k) => k + 1);
-                  router.refresh();
-                } finally {
-                  setSubmitting(false);
-                  diarySubmitLock.current = false;
-                }
-              });
-            }}
+            onComplete={handleDiaryComplete}
           />
         </div>
         {msg ? (
@@ -158,36 +165,34 @@ export function SkinDiaryView({ initialEntries }: Props) {
                     {items.map((it, itemIndex) => (
                       <motion.li
                         key={it.id}
-                        layout
+                        layout={false}
                         initial={{ opacity: 0, y: -12 }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          transition: { ...springSnappy, delay: itemIndex * 0.05 },
-                        }}
-                        exit={{ opacity: 0, y: -6, transition: springSnappy }}
+                        animate={{ opacity: 1, y: 0, transition: { ...tweenEnter, delay: itemIndex * 0.05 } }}
+                        exit={{ opacity: 0, y: -6, transition: tweenExit }}
                         className="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-zinc-800 dark:bg-zinc-900/60"
                       >
                         <motion.div
-                          whileTap={{ backgroundColor: "rgba(45, 212, 191, 0.12)" }}
-                          transition={springSnappy}
-                          className="relative aspect-square"
+                          whileTap={{ scale: 0.99, opacity: 0.95 }}
+                          transition={tweenTap}
+                          className="sk-will-change-transform relative aspect-square"
                         >
                           <Link
                             href={`/nhat-ky-da/${it.id}`}
-                            className="block h-full w-full"
+                            className="sk-touch-manipulation absolute inset-0 z-[1]"
                             onClick={() => triggerHaptic(10)}
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={it.imageUrlFront}
-                              alt=""
-                              className="h-full w-full object-cover transition group-hover:opacity-95"
-                              loading="lazy"
-                            />
+                            <span className="sr-only">Mở ảnh nhật ký</span>
                           </Link>
+                          <Image
+                            src={it.imageUrlFront}
+                            alt=""
+                            fill
+                            className="object-cover transition-opacity group-hover:opacity-95"
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            loading="lazy"
+                          />
                           {it.imageUrlLeft && it.imageUrlRight ? (
-                            <span className="pointer-events-none absolute left-1 top-1 rounded bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white backdrop-blur-sm">
+                            <span className="pointer-events-none absolute left-1 top-1 z-[2] rounded bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white backdrop-blur-sm">
                               3 góc
                             </span>
                           ) : null}
@@ -195,7 +200,7 @@ export function SkinDiaryView({ initialEntries }: Props) {
                           it.analysisResult.comparedWithEntryId !== it.id ? (
                             <Link
                               href={`/nhat-ky-da/so-sanh?before=${it.analysisResult.comparedWithEntryId}&after=${it.id}`}
-                              className="absolute bottom-1 right-1 rounded-md bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
+                              className="sk-touch-manipulation absolute bottom-1 right-1 z-[2] rounded-md bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
                               onClick={() => triggerHaptic(10)}
                             >
                               So sánh

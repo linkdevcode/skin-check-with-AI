@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { LayoutGrid, Sparkles, WalletCards, BookHeart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LichSuLoai } from "@/lib/lich-su-unified";
-import { springSoft, tweenTabIconBounce } from "@/components/ui/motion-spring";
+import { springSoft, tweenLayout, tweenTabIconBounce } from "@/components/ui/motion-spring";
+import { useCoarsePointerOrNarrow } from "@/components/ui/use-coarse-pointer";
 
 const tabs: {
   loai: LichSuLoai;
@@ -20,6 +22,9 @@ const tabs: {
 ];
 
 export function LichSuTabStrip({ activeLoai }: { activeLoai: LichSuLoai }) {
+  const coarse = useCoarsePointerOrNarrow();
+  const pillTransition = useMemo(() => (coarse ? tweenLayout : springSoft), [coarse]);
+
   return (
     <div
       className={cn(
@@ -39,7 +44,7 @@ export function LichSuTabStrip({ activeLoai }: { activeLoai: LichSuLoai }) {
             role="tab"
             aria-selected={active}
             className={cn(
-              "relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1.5 py-1.5 text-[10px] font-semibold leading-tight sm:min-h-9 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:py-1.5 sm:text-xs md:text-sm",
+              "sk-touch-manipulation relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border px-1.5 py-1.5 text-[10px] font-semibold leading-tight sm:min-h-9 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-3 sm:py-1.5 sm:text-xs md:text-sm",
               active
                 ? "border-teal-600 text-white dark:border-teal-500"
                 : "border-slate-200 bg-white text-slate-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300",
@@ -48,12 +53,15 @@ export function LichSuTabStrip({ activeLoai }: { activeLoai: LichSuLoai }) {
             {active ? (
               <motion.span
                 layoutId="lich-su-tab-pill"
-                className="absolute inset-0 rounded-xl bg-teal-600 sm:rounded-full dark:bg-teal-600"
-                transition={springSoft}
+                className="sk-will-change-transform absolute inset-0 rounded-xl bg-teal-600 sm:rounded-full dark:bg-teal-600"
+                transition={pillTransition}
               />
             ) : null}
             <motion.span
-              className="relative z-10 flex flex-col items-center gap-0.5 sm:flex-row sm:gap-1.5"
+              className={cn(
+                "relative z-10 flex flex-col items-center gap-0.5 sm:flex-row sm:gap-1.5",
+                active && "sk-will-change-transform",
+              )}
               initial={false}
               animate={active ? { scale: [1, 1.14, 1] } : { scale: 1 }}
               transition={active ? tweenTabIconBounce : { type: "tween", duration: 0.12, ease: "easeOut" }}

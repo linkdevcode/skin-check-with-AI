@@ -1,11 +1,13 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useCallback, useMemo, memo } from "react";
 import { motion, type HTMLMotionProps } from "framer-motion";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "./haptic";
 import { useCanHover } from "./use-can-hover";
-import { springBouncy, springSnappy } from "./motion-spring";
+import { useCoarsePointerOrNarrow } from "./use-coarse-pointer";
+import { springBouncy, springSnappy, tweenEnter, tweenTap } from "./motion-spring";
 
 export type InteractiveCardProps = Omit<HTMLMotionProps<"button">, "children"> & {
   children: React.ReactNode;
@@ -15,25 +17,38 @@ export type InteractiveCardProps = Omit<HTMLMotionProps<"button">, "children"> &
   decoration?: React.ReactNode;
 };
 
-export const InteractiveCard = forwardRef<HTMLButtonElement, InteractiveCardProps>(function InteractiveCard(
+const InteractiveCardInner = forwardRef<HTMLButtonElement, InteractiveCardProps>(function InteractiveCardInner(
   { className, children, selected, decoration, disabled, onPointerDown, onClick, ...rest },
   ref,
 ) {
   const canHover = useCanHover();
+  const coarse = useCoarsePointerOrNarrow();
+  const tapTransition = useMemo(() => (coarse ? tweenTap : springSnappy), [coarse]);
+  const checkTransition = useMemo(() => (coarse ? tweenEnter : springBouncy), [coarse]);
+
+  /** Chỉ transform — không animate border (tránh repaint nặng trên mobile) */
+  const hoverMotion =
+    canHover && !disabled && !selected ? { scale: 1.02, transition: tapTransition } : undefined;
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (!disabled) triggerHaptic(10);
+      onClick?.(e);
+    },
+    [disabled, onClick],
+  );
 
   return (
     <motion.button
       ref={ref}
       type="button"
+      layout={false}
       disabled={disabled}
-      whileHover={
-        canHover && !disabled && !selected
-          ? { borderColor: "rgba(148, 163, 184, 0.55)", transition: springBouncy }
-          : undefined
-      }
-      whileTap={disabled ? undefined : { scale: 0.98, transition: springSnappy }}
+      whileHover={hoverMotion}
+      whileTap={disabled ? undefined : { scale: 0.98, transition: tapTransition }}
       className={cn(
-        "relative min-h-[3.35rem] overflow-hidden rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-colors",
+        "sk-touch-manipulation relative min-h-[3.35rem] overflow-hidden rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-colors",
+        coarse && "sk-will-change-transform",
         "disabled:opacity-50",
         selected
           ? [
@@ -53,22 +68,18 @@ export const InteractiveCard = forwardRef<HTMLButtonElement, InteractiveCardProp
       onPointerDown={(e) => {
         onPointerDown?.(e);
       }}
-      onClick={(e) => {
-        if (!disabled && typeof window !== "undefined" && window.navigator.vibrate) {
-          window.navigator.vibrate(10);
-        }
-        onClick?.(e);
-      }}
+      onClick={handleClick}
       {...rest}
     >
       {decoration}
       {selected ? (
         <motion.span
           aria-hidden
-          className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-teal-500 text-white shadow-md shadow-teal-900/25 dark:bg-teal-400 dark:text-teal-950"
+          layout={false}
+          className="sk-will-change-transform absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-teal-500 text-white shadow-md shadow-teal-900/25 dark:bg-teal-400 dark:text-teal-950"
           initial={{ scale: 0, rotate: -45 }}
           animate={{ scale: 1, rotate: 0 }}
-          transition={springBouncy}
+          transition={checkTransition}
         >
           <Check className="h-3.5 w-3.5" strokeWidth={3} />
         </motion.span>
@@ -77,3 +88,7 @@ export const InteractiveCard = forwardRef<HTMLButtonElement, InteractiveCardProp
     </motion.button>
   );
 });
+
+InteractiveCardInner.displayName = "InteractiveCard";
+
+export const InteractiveCard = memo(InteractiveCardInner);

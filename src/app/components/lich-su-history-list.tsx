@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { springSnappy } from "@/components/ui/motion-spring";
+import { tweenEnter, tweenExit, tweenTap } from "@/components/ui/motion-spring";
 import { triggerHaptic } from "@/components/ui/haptic";
 
 export type LichSuHistoryRow = {
@@ -68,19 +68,19 @@ export function LichSuHistoryList({ items }: { items: LichSuHistoryRow[] }) {
           return (
             <motion.li
               key={`${row.kind}-${row.id}`}
-              layout
-              initial={{ opacity: 0, y: -14 }}
-              animate={{ opacity: 1, y: 0, transition: { ...springSnappy, delay: index * 0.05 } }}
-              exit={{ opacity: 0, y: -6, transition: springSnappy }}
+              layout={false}
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0, transition: { ...tweenEnter, delay: index * 0.05 } }}
+              exit={{ opacity: 0, y: -6, transition: tweenExit }}
             >
               <motion.div
-                whileTap={{ backgroundColor: "rgba(45, 212, 191, 0.12)" }}
-                transition={springSnappy}
-                className="rounded-2xl"
+                whileTap={{ scale: 0.992, opacity: 0.96 }}
+                transition={tweenTap}
+                className="sk-will-change-transform rounded-2xl"
               >
                 <Link
                   href={row.href}
-                  className="flex min-h-[3.25rem] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm ring-1 ring-slate-100 transition-colors dark:border-zinc-800 dark:bg-[#1a1f26]/80 dark:ring-zinc-800/60 sm:px-4"
+                  className="sk-touch-manipulation flex min-h-[3.25rem] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm ring-1 ring-slate-100 transition-colors dark:border-zinc-800 dark:bg-[#1a1f26]/80 dark:ring-zinc-800/60 sm:px-4"
                   onClick={() => triggerHaptic(10)}
                 >
                   <span

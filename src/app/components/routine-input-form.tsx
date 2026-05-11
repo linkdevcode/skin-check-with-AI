@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -35,7 +35,8 @@ import {
 import type { SkinTypeInput } from "@/types/routine-analysis";
 import { cn } from "@/lib/utils";
 import { InteractiveCard, MotionReveal, VibeButton, triggerHaptic } from "@/components/ui";
-import { springSnappy, springSoft, tweenTabIconBounce } from "@/components/ui/motion-spring";
+import { useCoarsePointerOrNarrow } from "@/components/ui/use-coarse-pointer";
+import { springSoft, tweenLayout, tweenTabIconBounce, tweenTap } from "@/components/ui/motion-spring";
 
 function isTransientAiCode(code?: string): boolean {
   return code === "RATE_LIMIT" || code === "UNAVAILABLE";
@@ -58,6 +59,9 @@ function RoutineAmPmTabs({
   onChange: (t: "am" | "pm") => void;
   disabled?: boolean;
 }) {
+  const coarse = useCoarsePointerOrNarrow();
+  const pillTransition = useMemo(() => (coarse ? tweenLayout : springSoft), [coarse]);
+
   const tabs = [
     { id: "am" as const, label: "Buổi sáng (AM)", Icon: Sun },
     { id: "pm" as const, label: "Buổi tối (PM)", Icon: Moon },
@@ -75,11 +79,12 @@ function RoutineAmPmTabs({
           <motion.button
             key={t.id}
             type="button"
+            layout={false}
             role="tab"
             aria-selected={isActive}
             disabled={disabled}
             whileTap={disabled ? undefined : { scale: 0.97 }}
-            transition={springSnappy}
+            transition={tweenTap}
             onClick={() => {
               if (!disabled) {
                 triggerHaptic(10);
@@ -87,7 +92,7 @@ function RoutineAmPmTabs({
               }
             }}
             className={cn(
-              "relative min-h-11 flex-1 overflow-hidden rounded-xl px-2 py-2.5 text-center text-sm font-semibold transition-colors",
+              "sk-touch-manipulation relative min-h-11 flex-1 overflow-hidden rounded-xl px-2 py-2.5 text-center text-sm font-semibold transition-colors",
               isActive ? "text-teal-900 dark:text-teal-50" : "text-slate-600 dark:text-zinc-400",
               "disabled:opacity-50",
             )}
@@ -95,12 +100,15 @@ function RoutineAmPmTabs({
             {isActive ? (
               <motion.span
                 layoutId="routine-am-pm-pill"
-                className="absolute inset-0 rounded-xl bg-white shadow-sm shadow-teal-900/10 ring-1 ring-teal-500/35 dark:bg-[#1a222c] dark:ring-teal-500/40"
-                transition={springSoft}
+                className="sk-will-change-transform absolute inset-0 rounded-xl bg-white shadow-sm shadow-teal-900/10 ring-1 ring-teal-500/35 dark:bg-[#1a222c] dark:ring-teal-500/40"
+                transition={pillTransition}
               />
             ) : null}
             <motion.span
-              className="relative z-10 inline-flex items-center justify-center gap-1.5"
+              className={cn(
+                "relative z-10 inline-flex items-center justify-center gap-1.5",
+                isActive && "sk-will-change-transform",
+              )}
               initial={false}
               animate={isActive ? { scale: [1, 1.12, 1] } : { scale: 1 }}
               transition={isActive ? tweenTabIconBounce : { type: "tween", duration: 0.12, ease: "easeOut" }}

@@ -1,12 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { springSoft } from "./motion-spring";
+import { cn } from "@/lib/utils";
+import { tweenEnter, tweenExit } from "./motion-spring";
 
 const fadeSlide = {
   initial: { opacity: 0, y: 18 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -12 },
+  animate: { opacity: 1, y: 0, transition: tweenEnter },
+  exit: { opacity: 0, y: -12, transition: tweenExit },
 };
 
 type StepTransitionProps = {
@@ -21,12 +22,12 @@ export function StepTransition({ stepKey, className, children }: StepTransitionP
     <AnimatePresence mode="wait">
       <motion.div
         key={stepKey}
-        className={className}
+        layout={false}
+        className={cn("sk-will-change-transform", className)}
         variants={fadeSlide}
         initial="initial"
         animate="animate"
         exit="exit"
-        transition={springSoft}
       >
         {children}
       </motion.div>
@@ -48,11 +49,11 @@ export function MotionReveal({ show, className, children }: MotionRevealProps) {
       {show ? (
         <motion.div
           key="reveal"
-          className={className}
+          layout={false}
+          className={cn("sk-will-change-transform", className)}
           initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={springSoft}
+          animate={{ opacity: 1, y: 0, transition: tweenEnter }}
+          exit={{ opacity: 0, y: -10, transition: tweenExit }}
         >
           {children}
         </motion.div>

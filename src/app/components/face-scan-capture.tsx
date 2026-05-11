@@ -37,14 +37,20 @@ export function FaceScanCapture({ onFileReady, disabled, showScanLine, className
     <div className={cn("space-y-4", className)}>
       <div className="relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-900/5 shadow-inner dark:border-zinc-700 dark:bg-black/40">
         {preview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="Xem trước" className="h-full w-full object-cover" />
+          // eslint-disable-next-line @next/next/no-img-element -- blob: URL, không dùng được next/image
+          <img
+            src={preview}
+            alt="Xem trước"
+            className="h-full w-full object-cover"
+            decoding="async"
+            fetchPriority="high"
+          />
         ) : (
           <button
             type="button"
             disabled={disabled}
             onClick={() => fileInputRef.current?.click()}
-            className="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-slate-600 dark:text-zinc-400"
+            className="sk-touch-manipulation flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-slate-600 dark:text-zinc-400"
           >
             <ImagePlus className="h-10 w-10 opacity-70" aria-hidden />
             Chạm để chọn ảnh
@@ -76,7 +82,7 @@ export function FaceScanCapture({ onFileReady, disabled, showScanLine, className
               clearPreview();
               fileInputRef.current?.click();
             }}
-            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-50"
+            className="sk-touch-manipulation inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-50"
           >
             <ImagePlus className="h-5 w-5 shrink-0" aria-hidden />
             Chọn ảnh khác
@@ -85,7 +91,7 @@ export function FaceScanCapture({ onFileReady, disabled, showScanLine, className
             type="button"
             disabled={disabled}
             onClick={() => clearPreview()}
-            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-800 dark:border-zinc-600 dark:text-white"
+            className="sk-touch-manipulation inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-800 dark:border-zinc-600 dark:text-white"
           >
             <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
             Bỏ ảnh

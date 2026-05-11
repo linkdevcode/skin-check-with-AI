@@ -34,6 +34,21 @@ html {
   color-scheme: light dark;
 }
 
+/* Mobile perf: bỏ độ trễ 300ms tap đôi; GPU cho layer chuyển động */
+.sk-touch-manipulation {
+  touch-action: manipulation;
+}
+
+.sk-will-change-transform {
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-will-change-transform {
+    will-change: auto;
+  }
+}
+
 /* Markdown trong khối lời khuyên AI */
 .ai-markdown {
   font-size: 0.9375rem;

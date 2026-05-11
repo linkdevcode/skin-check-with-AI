@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { Check, ChevronRight, Info } from "lucide-react";
 import { FaceScanCapture } from "@/app/components/face-scan-capture";
 import { uploadSkinImageAction } from "@/actions/upload-skin-image";
@@ -28,7 +28,13 @@ type Props = {
   className?: string;
 };
 
-export function MultiAngleFaceFlow({ minAngles, scope, disabled, onComplete, className }: Props) {
+export const MultiAngleFaceFlow = memo(function MultiAngleFaceFlow({
+  minAngles,
+  scope,
+  disabled,
+  onComplete,
+  className,
+}: Props) {
   const [stepIdx, setStepIdx] = useState(0);
   const [urls, setUrls] = useState<{ front: string | null; left: string | null; right: string | null }>({
     front: null,
@@ -171,7 +177,7 @@ export function MultiAngleFaceFlow({ minAngles, scope, disabled, onComplete, cla
             <button
               type="button"
               onClick={finishFrontOnly}
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-white"
+              className="sk-touch-manipulation inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-white"
             >
               <Check className="h-4 w-4" aria-hidden />
               Chỉ dùng ảnh trước
@@ -179,7 +185,7 @@ export function MultiAngleFaceFlow({ minAngles, scope, disabled, onComplete, cla
             <button
               type="button"
               onClick={startOptionalSides}
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-500"
+              className="sk-touch-manipulation inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-500"
             >
               Thêm góc trái &amp; phải
               <ChevronRight className="h-4 w-4" aria-hidden />
@@ -210,11 +216,13 @@ export function MultiAngleFaceFlow({ minAngles, scope, disabled, onComplete, cla
         <button
           type="button"
           onClick={reset}
-          className="text-xs font-medium text-slate-500 underline-offset-2 hover:underline dark:text-zinc-500"
+          className="sk-touch-manipulation text-xs font-medium text-slate-500 underline-offset-2 hover:underline dark:text-zinc-500"
         >
           Chụp lại từ đầu
         </button>
       ) : null}
     </div>
   );
-}
+});
+
+MultiAngleFaceFlow.displayName = "MultiAngleFaceFlow";

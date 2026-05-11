@@ -3,7 +3,7 @@ import { Wand2, BookHeart, ScanFace } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const cardBase = cn(
-  "group flex h-full min-h-[280px] flex-col items-center rounded-2xl border p-6 text-center shadow-sm transition",
+  "sk-touch-manipulation group flex h-full min-h-[280px] flex-col items-center rounded-2xl border p-6 text-center shadow-sm transition",
 );
 
 const titleClass = "text-base font-bold leading-snug text-slate-900 dark:text-white";

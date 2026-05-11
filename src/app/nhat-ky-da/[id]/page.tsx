@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/auth";
@@ -47,19 +48,37 @@ export default async function SkinEntryDetailPage({ params }: Props) {
           {row.createdAt.toLocaleString("vi-VN")}
         </p>
         <div className="mt-4 space-y-2">
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/40">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={row.imageUrlFront} alt="Mặt trước" className="aspect-square w-full object-cover" />
+          <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/40">
+            <Image
+              src={row.imageUrlFront}
+              alt="Mặt trước"
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, min(480px, 90vw)"
+              priority
+            />
           </div>
           {row.imageUrlLeft && row.imageUrlRight ? (
             <div className="grid grid-cols-2 gap-2">
-              <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={row.imageUrlLeft} alt="Góc trái" className="aspect-square w-full object-cover" />
+              <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
+                <Image
+                  src={row.imageUrlLeft}
+                  alt="Góc trái"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 50vw, 240px"
+                  loading="lazy"
+                />
               </div>
-              <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={row.imageUrlRight} alt="Góc phải" className="aspect-square w-full object-cover" />
+              <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-800">
+                <Image
+                  src={row.imageUrlRight}
+                  alt="Góc phải"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 50vw, 240px"
+                  loading="lazy"
+                />
               </div>
             </div>
           ) : null}
@@ -101,7 +120,7 @@ export default async function SkinEntryDetailPage({ params }: Props) {
         {compareHref ? (
           <Link
             href={compareHref}
-            className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-teal-600 text-sm font-semibold text-white hover:bg-teal-500"
+            className="sk-touch-manipulation mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-teal-600 text-sm font-semibold text-white hover:bg-teal-500"
           >
             Mở slider so sánh
           </Link>

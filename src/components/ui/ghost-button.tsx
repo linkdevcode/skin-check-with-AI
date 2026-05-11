@@ -1,17 +1,19 @@
 "use client";
 
-import { forwardRef, useCallback } from "react";
+import { forwardRef, useCallback, useMemo } from "react";
 import { motion, type HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "./haptic";
 import { useCanHover } from "./use-can-hover";
-import { springSnappy, springSoft } from "./motion-spring";
+import { useCoarsePointerOrNarrow } from "./use-coarse-pointer";
+import { springSnappy, springSoft, tweenTap } from "./motion-spring";
 
 export type GhostButtonProps = Omit<HTMLMotionProps<"button">, "children"> & {
   children: React.ReactNode;
 };
 
 const baseClass =
-  "relative inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-transparent px-4 text-sm font-medium " +
+  "sk-touch-manipulation relative inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-transparent px-4 text-sm font-medium " +
   "text-slate-700 transition-colors duration-200 " +
   "hover:bg-slate-100/90 hover:text-slate-900 motion-reduce:transition-none " +
   "dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800/70 dark:hover:text-white " +
@@ -26,12 +28,13 @@ export const GhostButton = forwardRef<HTMLButtonElement, GhostButtonProps>(funct
   ref,
 ) {
   const canHover = useCanHover();
+  const coarse = useCoarsePointerOrNarrow();
+  const tapTransition = useMemo(() => (coarse ? tweenTap : springSnappy), [coarse]);
+  const hoverTransition = useMemo(() => (coarse ? tweenTap : springSoft), [coarse]);
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (!disabled && typeof window !== "undefined" && window.navigator.vibrate) {
-        window.navigator.vibrate(10);
-      }
+      if (!disabled) triggerHaptic(10);
       onClick?.(e);
     },
     [disabled, onClick],
@@ -41,10 +44,11 @@ export const GhostButton = forwardRef<HTMLButtonElement, GhostButtonProps>(funct
     <motion.button
       ref={ref}
       type="button"
+      layout={false}
       disabled={disabled}
-      whileHover={canHover && !disabled ? { y: -1, transition: springSoft } : undefined}
-      whileTap={disabled ? undefined : { scale: 0.96, opacity: 0.9, transition: springSnappy }}
-      className={cn(baseClass, className)}
+      whileHover={canHover && !disabled ? { y: -1, transition: hoverTransition } : undefined}
+      whileTap={disabled ? undefined : { scale: 0.96, opacity: 0.9, transition: tapTransition }}
+      className={cn(baseClass, coarse && "sk-will-change-transform", className)}
       onPointerDown={(e) => {
         onPointerDown?.(e);
       }}

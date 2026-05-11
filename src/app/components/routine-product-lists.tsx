@@ -1,9 +1,10 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import { Minus, Plus } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { springSnappy } from "@/components/ui/motion-spring";
+import { tweenEnter, tweenExit, tweenTap } from "@/components/ui/motion-spring";
 import { triggerHaptic } from "@/components/ui/haptic";
 
 export type ProductRow = { id: string; text: string };
@@ -28,9 +29,9 @@ const listVariants = {
 };
 
 const rowVariants = {
-  hidden: { opacity: 0, y: -12 },
-  show: { opacity: 1, y: 0, transition: springSnappy },
-  exit: { opacity: 0, height: 0, marginBottom: 0, transition: { type: "spring" as const, stiffness: 400, damping: 32 } },
+  hidden: { opacity: 0, y: -10 },
+  show: { opacity: 1, y: 0, transition: tweenEnter },
+  exit: { opacity: 0, y: -6, transition: tweenExit },
 };
 
 type SectionProps = {
@@ -41,20 +42,26 @@ type SectionProps = {
   disabled?: boolean;
 };
 
-function ProductSection({ title, badge, rows, onChange, disabled }: SectionProps) {
-  const updateText = (id: string, text: string) => {
-    onChange(rows.map((r) => (r.id === id ? { ...r, text } : r)));
-  };
+const ProductSection = memo(function ProductSection({ title, badge, rows, onChange, disabled }: SectionProps) {
+  const updateText = useCallback(
+    (id: string, text: string) => {
+      onChange(rows.map((r) => (r.id === id ? { ...r, text } : r)));
+    },
+    [onChange, rows],
+  );
 
-  const remove = (id: string) => {
-    if (typeof window !== "undefined" && window.navigator.vibrate) window.navigator.vibrate(10);
-    onChange(rows.filter((r) => r.id !== id));
-  };
+  const remove = useCallback(
+    (id: string) => {
+      triggerHaptic(10);
+      onChange(rows.filter((r) => r.id !== id));
+    },
+    [onChange, rows],
+  );
 
-  const add = () => {
+  const add = useCallback(() => {
     triggerHaptic(10);
     onChange([...rows, { id: newRowId(), text: "" }]);
-  };
+  }, [onChange, rows]);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm ring-1 ring-slate-100 dark:border-zinc-800/90 dark:bg-[#141820]/70 dark:shadow-none dark:ring-zinc-800/50">
@@ -64,12 +71,12 @@ function ProductSection({ title, badge, rows, onChange, disabled }: SectionProps
           {badge}
         </span>
       </div>
-      <motion.ul className="space-y-2" role="list" variants={listVariants} initial="hidden" animate="show">
+      <motion.ul className="space-y-2" role="list" variants={listVariants} initial="hidden" animate="show" layout={false}>
         <AnimatePresence mode="popLayout">
           {rows.map((row) => (
             <motion.li
               key={row.id}
-              layout
+              layout={false}
               variants={rowVariants}
               initial="hidden"
               animate="show"
@@ -77,9 +84,9 @@ function ProductSection({ title, badge, rows, onChange, disabled }: SectionProps
               className="overflow-hidden"
             >
               <motion.div
-                className="flex items-stretch gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 p-1.5 ring-1 ring-inset ring-slate-200/80 dark:border-zinc-800 dark:bg-black/25 dark:ring-zinc-800/40"
-                whileTap={{ backgroundColor: "rgba(45, 212, 191, 0.12)" }}
-                transition={springSnappy}
+                className="sk-touch-manipulation sk-will-change-transform flex items-stretch gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 p-1.5 ring-1 ring-inset ring-slate-200/80 dark:border-zinc-800 dark:bg-black/25 dark:ring-zinc-800/40"
+                whileTap={{ scale: 0.992, opacity: 0.96 }}
+                transition={tweenTap}
               >
                 <input
                   type="text"
@@ -99,7 +106,7 @@ function ProductSection({ title, badge, rows, onChange, disabled }: SectionProps
                   type="button"
                   onClick={() => remove(row.id)}
                   disabled={disabled}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-zinc-700/80 dark:text-zinc-500 dark:hover:bg-red-950/50 dark:hover:text-red-400 disabled:opacity-40"
+                  className="sk-touch-manipulation flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-zinc-700/80 dark:text-zinc-500 dark:hover:bg-red-950/50 dark:hover:text-red-400 disabled:opacity-40"
                   aria-label="Xóa dòng"
                 >
                   <Minus className="h-4 w-4" strokeWidth={2.5} />
@@ -113,14 +120,14 @@ function ProductSection({ title, badge, rows, onChange, disabled }: SectionProps
         type="button"
         onClick={add}
         disabled={disabled}
-        className="mt-2 flex w-full min-h-10 items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 text-xs font-semibold text-slate-500 transition-colors hover:border-teal-400/80 hover:text-teal-700 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-teal-700/60 dark:hover:text-teal-400"
+        className="sk-touch-manipulation mt-2 flex w-full min-h-10 items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 text-xs font-semibold text-slate-500 transition-colors hover:border-teal-400/80 hover:text-teal-700 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-teal-700/60 dark:hover:text-teal-400"
       >
         <Plus className="h-4 w-4" />
         Thêm bước
       </button>
     </div>
   );
-}
+});
 
 type RoutineProductListsProps = {
   morningRows: ProductRow[];
@@ -130,7 +137,7 @@ type RoutineProductListsProps = {
   disabled?: boolean;
 };
 
-export function RoutineProductLists({
+export const RoutineProductLists = memo(function RoutineProductLists({
   morningRows,
   eveningRows,
   onMorningChange,
@@ -155,4 +162,4 @@ export function RoutineProductLists({
       />
     </div>
   );
-}
+});
