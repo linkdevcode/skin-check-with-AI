@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/app/components/auth-shell";
+import { AuthPasswordField } from "@/app/components/auth-password-field";
 import { registerUser } from "@/actions/auth-actions";
 import { authFieldClass } from "@/lib/auth-field-classes";
 import { cn } from "@/lib/utils";
@@ -99,16 +100,14 @@ export function RegisterForm() {
           <label htmlFor="reg-password" className="text-sm font-medium text-zinc-300">
             Mật khẩu (tối thiểu 8 ký tự)
           </label>
-          <input
+          <AuthPasswordField
             id="reg-password"
             name="password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={cn("mt-1", authFieldClass)}
             disabled={loading}
           />
         </div>

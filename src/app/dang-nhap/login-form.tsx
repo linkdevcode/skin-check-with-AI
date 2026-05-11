@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/app/components/auth-shell";
+import { AuthPasswordField } from "@/app/components/auth-password-field";
 import { authFieldClass } from "@/lib/auth-field-classes";
 import { cn } from "@/lib/utils";
 
@@ -90,15 +91,13 @@ export function LoginForm() {
               Quên mật khẩu?
             </Link>
           </div>
-          <input
+          <AuthPasswordField
             id="login-password"
             name="password"
-            type="password"
             autoComplete="current-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={cn("mt-1", authFieldClass)}
             disabled={loading}
           />
         </div>

@@ -39,7 +39,14 @@ export async function sendPasswordResetEmail(
 
   if (error) {
     console.error("[email] Resend error:", error);
-    return { sent: false };
+    const isDev = process.env.NODE_ENV === "development";
+    if (isDev) {
+      console.warn(
+        "[email] Resend từ chối gửi (thường do sandbox: chỉ gửi được tới email Resend hoặc cần verify domain). Link đặt lại (dev):",
+        resetLink,
+      );
+    }
+    return { sent: false, devFallbackLink: isDev ? resetLink : undefined };
   }
 
   return { sent: true };

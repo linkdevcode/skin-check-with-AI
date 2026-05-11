@@ -84,7 +84,16 @@ export async function requestPasswordReset(emailRaw: string): Promise<ActionResu
     const { sent, devFallbackLink } = await sendPasswordResetEmail(email, resetLink);
 
     if (!sent && devFallbackLink) {
-      console.info("\n[requestPasswordReset] Chưa có RESEND_API_KEY — link đặt lại mật khẩu (dev):\n", devFallbackLink, "\n");
+      console.info(
+        "\n[requestPasswordReset] Email không gửi qua Resend (dev: thiếu API key hoặc lỗi sandbox) — link đặt lại mật khẩu:\n",
+        devFallbackLink,
+        "\n",
+      );
+    }
+    if (!sent && !devFallbackLink) {
+      console.error(
+        "[requestPasswordReset] Không gửi được email đặt lại. Trên production: verify domain tại resend.com/domains và đặt RESEND_FROM từ domain đó.",
+      );
     }
 
     return { ok: true };

@@ -5,9 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/app/components/auth-shell";
+import { AuthPasswordField } from "@/app/components/auth-password-field";
 import { resetPasswordWithToken } from "@/actions/auth-actions";
-import { authFieldClass } from "@/lib/auth-field-classes";
-import { cn } from "@/lib/utils";
 
 export function ResetForm() {
   const router = useRouter();
@@ -65,16 +64,14 @@ export function ResetForm() {
           <label htmlFor="new-pass" className="text-sm font-medium text-zinc-300">
             Mật khẩu mới
           </label>
-          <input
+          <AuthPasswordField
             id="new-pass"
             name="password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={cn("mt-1", authFieldClass)}
             disabled={loading}
           />
         </div>
@@ -82,16 +79,14 @@ export function ResetForm() {
           <label htmlFor="new-pass-2" className="text-sm font-medium text-zinc-300">
             Nhập lại mật khẩu
           </label>
-          <input
+          <AuthPasswordField
             id="new-pass-2"
             name="password2"
-            type="password"
             autoComplete="new-password"
             required
             minLength={8}
             value={again}
             onChange={(e) => setAgain(e.target.value)}
-            className={cn("mt-1", authFieldClass)}
             disabled={loading}
           />
         </div>

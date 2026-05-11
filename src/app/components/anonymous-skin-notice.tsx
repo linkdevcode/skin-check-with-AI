@@ -8,12 +8,20 @@ type Props = {
 
 /** Cảnh báo khi dùng phân tích da (routine ngân sách) mà chưa đăng nhập — khách vẫn lưu DB theo cookie. */
 export function AnonymousSkinNotice({ callbackPath }: Props) {
-  const q = encodeURIComponent(callbackPath);
+  const loginHref = `/dang-nhap?callbackUrl=${encodeURIComponent(callbackPath)}`;
   return (
     <div className="mb-5 flex gap-3 rounded-xl border border-amber-200 bg-amber-50/95 px-3 py-3 text-sm text-amber-950 dark:border-amber-900/55 dark:bg-amber-950/40 dark:text-amber-50">
       <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
       <div className="space-y-1.5 leading-snug">
         <p className="font-semibold">Đăng nhập để lưu kết quả và xem lại trên mọi thiết bị.</p>
+        <p>
+          <Link
+            href={loginHref}
+            className="sk-press-feedback font-medium text-amber-800 underline underline-offset-2 hover:text-amber-950 dark:text-amber-200 dark:hover:text-amber-50"
+          >
+            Đăng nhập hoặc tạo tài khoản
+          </Link>
+        </p>
       </div>
     </div>
   );
