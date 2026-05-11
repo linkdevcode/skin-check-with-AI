@@ -121,9 +121,9 @@ export function RoutineLanding() {
               <div className={budgetIconWrap} aria-hidden>
                 <ScanFace className={budgetIcon} strokeWidth={2} />
               </div>
-              <h2 className={titleClass}>Phân tích da &amp; ngân sách</h2>
+              <h2 className={titleClass}>Phân tích da &amp; gợi ý routine</h2>
               <p className={descClass}>
-                Bước 1: Chụp ảnh mặt trước (bắt buộc) — 2 ảnh trái phải là tuỳ chọn để AI chấm điểm chính xác hơn.
+                Camera, điểm số AI và gợi ý routine phù hợp.
               </p>
               <span className={budgetBtn}>Bắt đầu</span>
             </Link>
@@ -143,7 +143,7 @@ export function RoutineLanding() {
               </div>
               <h2 className={titleClass}>Nhật ký theo dõi da</h2>
               <p className={descClass}>
-                Bước 1: Chụp ảnh mặt trước (bắt buộc). AI cần ảnh này để so sánh với các mốc thời gian khác.
+                Theo dõi ảnh theo ngày, so sánh trước/sau, biểu đồ cải thiện.
               </p>
               <span className={diaryBtn}>Mở nhật ký</span>
             </Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ImagePlus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,17 +41,8 @@ export function FaceScanCapture({
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [blobPreview, setBlobPreview] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
 
   const displaySrc = blobPreview ?? committedImageUrl ?? null;
-
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
 
   useEffect(() => {
     if (!committedImageUrl) return;
@@ -60,13 +51,6 @@ export function FaceScanCapture({
       return null;
     });
   }, [committedImageUrl]);
-
-  const dragEnabled = useMemo(() => {
-    if (!isMobile) return false;
-    if (!navArrows) return false;
-    // Cho phép vuốt khi ảnh đang hiển thị; không gây khó chịu khi chưa chọn ảnh.
-    return Boolean(displaySrc);
-  }, [displaySrc, isMobile, navArrows]);
 
   const revokeBlob = () => {
     if (blobPreview?.startsWith("blob:")) URL.revokeObjectURL(blobPreview);
@@ -94,10 +78,10 @@ export function FaceScanCapture({
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Desktop: mũi tên nằm ngoài ảnh (không đè). Mobile: ẩn mũi tên + vuốt để đổi bước. */}
+      {/* Mũi tên nằm ngoài khung ảnh để không che chi tiết. Mobile: hiển thị mũi tên (touch target lớn). */}
       <div className="mx-auto w-full max-w-[min(100%,420px)]">
-        <div className="grid grid-cols-[44px_1fr_44px] items-center gap-5 px-5">
-          <div className="flex items-center justify-center max-md:hidden">
+        <div className="grid grid-cols-[44px_1fr_44px] items-center gap-5 px-5 max-md:grid-cols-[56px_1fr_56px] max-md:px-6">
+          <div className="flex items-center justify-center">
             {navArrows?.showLeft ? (
               <motion.button
                 type="button"
@@ -107,27 +91,18 @@ export function FaceScanCapture({
                   e.stopPropagation();
                   navArrows.onPrev();
                 }}
-                className="sk-touch-manipulation flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900"
+                className="sk-touch-manipulation flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900 max-md:min-h-[56px] max-md:min-w-[56px]"
                 aria-label="Xem bước ảnh trước"
               >
-                <ChevronLeft className="h-7 w-7" aria-hidden />
+                <ChevronLeft className="h-7 w-7 max-md:h-8 max-md:w-8" aria-hidden />
               </motion.button>
             ) : (
-              <div className="h-11 w-11" aria-hidden />
+              <div className="h-11 w-11 max-md:h-[56px] max-md:w-[56px]" aria-hidden />
             )}
           </div>
 
           <motion.div
             className="sk-touch-manipulation relative mx-auto w-[280px]"
-            drag={dragEnabled ? "x" : false}
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.18}
-            onDragEnd={(_, info) => {
-              if (!dragEnabled || !navArrows) return;
-              const x = info.offset.x;
-              if (x > 60 && navArrows.showLeft) navArrows.onPrev();
-              if (x < -60 && navArrows.showRight) navArrows.onNext();
-            }}
           >
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-900/5 shadow-inner dark:border-zinc-700 dark:bg-black/40">
               {displaySrc ? (
@@ -167,7 +142,9 @@ export function FaceScanCapture({
                     key={i}
                     className={cn(
                       "h-1.5 w-1.5 rounded-full transition",
-                      i === dots.index ? "bg-slate-900/70 dark:bg-white/70" : "bg-slate-900/20 dark:bg-white/20",
+                      i === dots.index
+                        ? "bg-slate-900/55 dark:bg-white/55"
+                        : "bg-slate-900/12 dark:bg-white/12",
                     )}
                   />
                 ))}
@@ -175,7 +152,7 @@ export function FaceScanCapture({
             ) : null}
           </motion.div>
 
-          <div className="flex items-center justify-center max-md:hidden">
+          <div className="flex items-center justify-center">
             {navArrows?.showRight ? (
               <motion.button
                 type="button"
@@ -185,13 +162,13 @@ export function FaceScanCapture({
                   e.stopPropagation();
                   navArrows.onNext();
                 }}
-                className="sk-touch-manipulation flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900"
+                className="sk-touch-manipulation flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-900 max-md:min-h-[56px] max-md:min-w-[56px]"
                 aria-label="Sang bước ảnh tiếp theo"
               >
-                <ChevronRight className="h-7 w-7" aria-hidden />
+                <ChevronRight className="h-7 w-7 max-md:h-8 max-md:w-8" aria-hidden />
               </motion.button>
             ) : (
-              <div className="h-11 w-11" aria-hidden />
+              <div className="h-11 w-11 max-md:h-[56px] max-md:w-[56px]" aria-hidden />
             )}
           </div>
         </div>
