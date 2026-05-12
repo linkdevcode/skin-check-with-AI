@@ -136,42 +136,55 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
   }, [stepIdx]);
 
   const handleStart = async () => {
+    setBusy(true);
     let frontUrl = frontImage;
     let leftUrl = leftImage;
     let rightUrl = rightImage;
 
     if (!frontUrl && frontFile) {
       const uploaded = await uploadFile(frontFile);
-      if (uploaded) {
-        setFrontImage(uploaded);
-        frontUrl = uploaded;
+      if (!uploaded) {
+        setBusy(false);
+        setMsg("Tải ảnh mặt trước thất bại. Kiểm tra mạng và thử lại.");
+        return;
       }
+      setFrontImage(uploaded);
+      frontUrl = uploaded;
     }
     if (!leftUrl && leftFile) {
       const uploaded = await uploadFile(leftFile);
-      if (uploaded) {
-        setLeftImage(uploaded);
-        leftUrl = uploaded;
+      if (!uploaded) {
+        setBusy(false);
+        setMsg("Tải ảnh góc trái thất bại. Kiểm tra mạng và thử lại.");
+        return;
       }
+      setLeftImage(uploaded);
+      leftUrl = uploaded;
     }
     if (!rightUrl && rightFile) {
       const uploaded = await uploadFile(rightFile);
-      if (uploaded) {
-        setRightImage(uploaded);
-        rightUrl = uploaded;
+      if (!uploaded) {
+        setBusy(false);
+        setMsg("Tải ảnh góc phải thất bại. Kiểm tra mạng và thử lại.");
+        return;
       }
+      setRightImage(uploaded);
+      rightUrl = uploaded;
     }
 
     if (!frontUrl?.trim()) {
       setMsg(FRONT_REQUIRED_MSG);
+      setBusy(false);
       return;
     }
     if (!leftUrl || !rightUrl) {
       setMsg("Cần đủ 3 ảnh (mặt trước, trái, phải).");
+      setBusy(false);
       return;
     }
     setMsg(null);
     onCompleteRef.current({ front: frontUrl, left: leftUrl, right: rightUrl });
+    setBusy(false);
   };
 
   const reset = () => {
