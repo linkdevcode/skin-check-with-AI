@@ -158,12 +158,13 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
     stepIdx === 0 ? frontPreview : stepIdx === 1 ? leftPreview : rightPreview;
 
   const hasFront = !!frontImage;
+  const hasFrontForNav = Boolean(frontPreview ?? frontImage);
 
   const navArrows: FaceFrameNavArrows = (() => {
     if (stepIdx === 0) {
       return {
         showLeft: false,
-        showRight: hasFront,
+        showRight: hasFrontForNav,
         onPrev: () => {},
         onNext: () => setStepIdx(1),
       };

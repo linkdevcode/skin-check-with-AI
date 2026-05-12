@@ -152,11 +152,14 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
   const hasFront = !!frontImage;
   const hasLeft = !!leftImage;
   const hasRight = !!rightImage;
+  const hasFrontForNav = Boolean(frontPreview ?? frontImage);
+  const hasLeftForNav = Boolean(leftPreview ?? leftImage);
+  const hasRightForNav = Boolean(rightPreview ?? rightImage);
   const navArrows: FaceFrameNavArrows = (() => {
     if (stepIdx === 0) {
       return {
         showLeft: false,
-        showRight: hasFront,
+        showRight: hasFrontForNav,
         onPrev: () => {},
         onNext: () => setStepIdx(1),
       };
@@ -164,14 +167,14 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
     if (stepIdx === 1) {
       return {
         showLeft: true,
-        showRight: hasLeft,
+        showRight: hasLeftForNav,
         onPrev: () => setStepIdx(0),
         onNext: () => setStepIdx(2),
       };
     }
     return {
       showLeft: true,
-      showRight: false,
+      showRight: hasRightForNav,
       onPrev: () => setStepIdx(1),
       onNext: () => {},
     };
