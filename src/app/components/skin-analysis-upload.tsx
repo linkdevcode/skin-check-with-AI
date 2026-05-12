@@ -50,6 +50,9 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [leftImage, setLeftImage] = useState<string | null>(null);
   const [rightImage, setRightImage] = useState<string | null>(null);
+  const [frontFile, setFrontFile] = useState<File | null>(null);
+  const [leftFile, setLeftFile] = useState<File | null>(null);
+  const [rightFile, setRightFile] = useState<File | null>(null);
   const [frontPreview, setFrontPreview] = useState<string | null>(null);
   const [leftPreview, setLeftPreview] = useState<string | null>(null);
   const [rightPreview, setRightPreview] = useState<string | null>(null);
@@ -93,9 +96,16 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
       try {
         const dataUrl = await fileToDataUrl(file);
         const currentIdx = stepIdxRef.current;
-        if (currentIdx === 0) setFrontPreview(dataUrl);
-        else if (currentIdx === 1) setLeftPreview(dataUrl);
-        else setRightPreview(dataUrl);
+        if (currentIdx === 0) {
+          setFrontPreview(dataUrl);
+          setFrontFile(file);
+        } else if (currentIdx === 1) {
+          setLeftPreview(dataUrl);
+          setLeftFile(file);
+        } else {
+          setRightPreview(dataUrl);
+          setRightFile(file);
+        }
         const url = await uploadFile(file);
         if (!url) return;
         if (currentIdx === 0) setFrontImage(url);
@@ -113,23 +123,55 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
     if (stepIdx === 0) {
       setFrontImage(null);
       setFrontPreview(null);
+      setFrontFile(null);
     } else if (stepIdx === 1) {
       setLeftImage(null);
       setLeftPreview(null);
+      setLeftFile(null);
     } else {
       setRightImage(null);
       setRightPreview(null);
+      setRightFile(null);
     }
   }, [stepIdx]);
 
-  const handleStart = () => {
-    if (!frontImage?.trim()) {
+  const handleStart = async () => {
+    let frontUrl = frontImage;
+    let leftUrl = leftImage;
+    let rightUrl = rightImage;
+
+    if (!frontUrl && frontFile) {
+      const uploaded = await uploadFile(frontFile);
+      if (uploaded) {
+        setFrontImage(uploaded);
+        frontUrl = uploaded;
+      }
+    }
+    if (!leftUrl && leftFile) {
+      const uploaded = await uploadFile(leftFile);
+      if (uploaded) {
+        setLeftImage(uploaded);
+        leftUrl = uploaded;
+      }
+    }
+    if (!rightUrl && rightFile) {
+      const uploaded = await uploadFile(rightFile);
+      if (uploaded) {
+        setRightImage(uploaded);
+        rightUrl = uploaded;
+      }
+    }
+
+    if (!frontUrl?.trim()) {
       setMsg(FRONT_REQUIRED_MSG);
       return;
     }
-    if (!leftImage || !rightImage) return;
+    if (!leftUrl || !rightUrl) {
+      setMsg("Cần đủ 3 ảnh (mặt trước, trái, phải).");
+      return;
+    }
     setMsg(null);
-    onCompleteRef.current({ front: frontImage, left: leftImage, right: rightImage });
+    onCompleteRef.current({ front: frontUrl, left: leftUrl, right: rightUrl });
   };
 
   const reset = () => {
@@ -140,6 +182,9 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
     setFrontPreview(null);
     setLeftPreview(null);
     setRightPreview(null);
+    setFrontFile(null);
+    setLeftFile(null);
+    setRightFile(null);
     setMsg(null);
     onFrontImageChange?.(null);
   };
@@ -149,9 +194,6 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
   const previewForStep =
     stepIdx === 0 ? frontPreview : stepIdx === 1 ? leftPreview : rightPreview;
 
-  const hasFront = !!frontImage;
-  const hasLeft = !!leftImage;
-  const hasRight = !!rightImage;
   const hasFrontForNav = Boolean(frontPreview ?? frontImage);
   const hasLeftForNav = Boolean(leftPreview ?? leftImage);
   const hasRightForNav = Boolean(rightPreview ?? rightImage);

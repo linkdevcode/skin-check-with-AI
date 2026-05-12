@@ -59,6 +59,7 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [leftImage, setLeftImage] = useState<string | null>(null);
   const [rightImage, setRightImage] = useState<string | null>(null);
+  const [frontFile, setFrontFile] = useState<File | null>(null);
   const [frontPreview, setFrontPreview] = useState<string | null>(null);
   const [leftPreview, setLeftPreview] = useState<string | null>(null);
   const [rightPreview, setRightPreview] = useState<string | null>(null);
@@ -102,9 +103,14 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
       try {
         const dataUrl = await fileToDataUrl(file);
         const idx = stepIdxRef.current;
-        if (idx === 0) setFrontPreview(dataUrl);
-        else if (idx === 1) setLeftPreview(dataUrl);
-        else setRightPreview(dataUrl);
+        if (idx === 0) {
+          setFrontPreview(dataUrl);
+          setFrontFile(file);
+        } else if (idx === 1) {
+          setLeftPreview(dataUrl);
+        } else {
+          setRightPreview(dataUrl);
+        }
         const url = await uploadFile(file);
         if (!url) return;
         if (idx === 0) setFrontImage(url);
@@ -125,16 +131,25 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
     if (stepIdx === 0) setFrontPreview(null);
     else if (stepIdx === 1) setLeftPreview(null);
     else setRightPreview(null);
+    if (stepIdx === 0) setFrontFile(null);
   }, [stepIdx]);
 
-  const handleStart = () => {
-    if (!frontImage?.trim()) {
+  const handleStart = async () => {
+    let frontUrl = frontImage;
+    if (!frontUrl && frontFile) {
+      const uploaded = await uploadFile(frontFile);
+      if (uploaded) {
+        setFrontImage(uploaded);
+        frontUrl = uploaded;
+      }
+    }
+    if (!frontUrl?.trim()) {
       setMsg("Cần chụp ảnh mặt trước để tiếp tục.");
       return;
     }
     setMsg(null);
     onCompleteRef.current({
-      front: frontImage,
+      front: frontUrl,
       left: leftImage?.trim() || null,
       right: rightImage?.trim() || null,
     });
@@ -148,6 +163,7 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
     setFrontPreview(null);
     setLeftPreview(null);
     setRightPreview(null);
+    setFrontFile(null);
     setMsg(null);
     onFrontImageChange?.(null);
   };
@@ -157,7 +173,6 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
   const previewForStep =
     stepIdx === 0 ? frontPreview : stepIdx === 1 ? leftPreview : rightPreview;
 
-  const hasFront = !!frontImage;
   const hasFrontForNav = Boolean(frontPreview ?? frontImage);
 
   const navArrows: FaceFrameNavArrows = (() => {
