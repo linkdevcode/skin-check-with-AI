@@ -45,6 +45,7 @@ model User {
   routines SkincareRoutine[]
   skinEntries SkinEntry[]
   recommendedRoutines RecommendedRoutine[]
+  skinImages SkinImage[]
 
   @@index([resetToken])
   @@map("users")
@@ -151,4 +152,18 @@ model RecommendedRoutine {
 
   @@index([userId, createdAt])
   @@map("recommended_routines")
+}
+
+/// Lưu URL ảnh upload lên Blob ngay sau upload để tránh mất URL trên iOS
+model SkinImage {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id") @db.Uuid
+  scope     String
+  url       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("skin_images")
 }

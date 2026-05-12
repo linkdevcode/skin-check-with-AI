@@ -3,6 +3,7 @@
 import { put } from "@vercel/blob";
 import { auth } from "@/auth";
 import { resolveSkinActorUserId } from "@/lib/skin-actor";
+import { prisma } from "@/lib/prisma";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
@@ -59,6 +60,21 @@ export async function uploadSkinImageAction(formData: FormData): Promise<UploadS
       token,
       contentType: mime === "image/jpg" ? "image/jpeg" : mime,
     });
+
+    // Lưu URL vào DB ngay sau khi upload để tránh mất URL trên iOS/Safari
+    try {
+      await prisma.skinImage.create({
+        data: {
+          userId,
+          scope: prefix,
+          url: blob.url,
+        },
+      });
+    } catch (dbErr) {
+      console.error("[uploadSkinImageAction] Lưu URL blob thất bại:", dbErr);
+      // không chặn upload, chỉ log
+    }
+
     return { ok: true, url: blob.url };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Upload thất bại.";
