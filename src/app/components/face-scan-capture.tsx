@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ImagePlus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,22 +20,11 @@ type Props = {
   disabled?: boolean;
   showScanLine?: boolean;
   navArrows?: FaceFrameNavArrows | null;
+  previewSrc?: string | null;
   className?: string;
 };
 
 const tapMotion = { scale: 0.9, transition: tweenTap };
-
-async function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") resolve(reader.result);
-      else reject(new Error("Không đọc được file"));
-    };
-    reader.onerror = () => reject(reader.error ?? new Error("Không đọc được file"));
-    reader.readAsDataURL(file);
-  });
-}
 
 export function FaceScanCapture({
   onFileReady,
@@ -44,44 +33,27 @@ export function FaceScanCapture({
   disabled,
   showScanLine,
   navArrows,
+  previewSrc,
   className,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [base64Preview, setBase64Preview] = useState<string | null>(null);
 
-  const displaySrc = base64Preview ?? committedImageUrl ?? null;
+  const displaySrc = previewSrc ?? committedImageUrl ?? null;
   const canPrev = navArrows?.showLeft ?? false;
   const canNext = navArrows?.showRight ?? false;
   const handlePrev = navArrows?.onPrev ?? (() => {});
   const handleNext = navArrows?.onNext ?? (() => {});
 
-  useEffect(() => {
-    if (!committedImageUrl) return;
-    setBase64Preview(null);
-  }, [committedImageUrl]);
-
-  const revokeBlob = () => {
-    setBase64Preview(null);
-  };
-
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = "";
     if (!f || disabled) return;
-    revokeBlob();
-    try {
-      const dataUrl = await fileToDataUrl(f);
-      setBase64Preview(dataUrl);
-    } catch {
-      setBase64Preview(null);
-    }
     onFileReady(f);
   };
 
   const openPicker = () => fileInputRef.current?.click();
 
   const onDiscard = () => {
-    revokeBlob();
     onClearCommitted?.();
   };
 
@@ -178,7 +150,6 @@ export function FaceScanCapture({
             type="button"
             disabled={disabled}
             onClick={() => {
-              revokeBlob();
               openPicker();
             }}
             className="sk-touch-manipulation inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-50"

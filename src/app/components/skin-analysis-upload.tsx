@@ -5,6 +5,18 @@ import { FaceScanCapture, type FaceFrameNavArrows } from "@/app/components/face-
 import { uploadSkinImageAction } from "@/actions/upload-skin-image";
 import { cn } from "@/lib/utils";
 
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Không đọc được file"));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Không đọc được file"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export type SkinAnalysisTriplet = { front: string; left: string; right: string };
 
 const STEPS_VI = [
@@ -38,6 +50,9 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [leftImage, setLeftImage] = useState<string | null>(null);
   const [rightImage, setRightImage] = useState<string | null>(null);
+  const [frontPreview, setFrontPreview] = useState<string | null>(null);
+  const [leftPreview, setLeftPreview] = useState<string | null>(null);
+  const [rightPreview, setRightPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -76,11 +91,15 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
       setMsg(null);
       setBusy(true);
       try {
+        const dataUrl = await fileToDataUrl(file);
+        const currentIdx = stepIdxRef.current;
+        if (currentIdx === 0) setFrontPreview(dataUrl);
+        else if (currentIdx === 1) setLeftPreview(dataUrl);
+        else setRightPreview(dataUrl);
         const url = await uploadFile(file);
         if (!url) return;
-        const idx = stepIdxRef.current;
-        if (idx === 0) setFrontImage(url);
-        else if (idx === 1) setLeftImage(url);
+        if (currentIdx === 0) setFrontImage(url);
+        else if (currentIdx === 1) setLeftImage(url);
         else setRightImage(url);
       } finally {
         uploadInFlightRef.current = false;
@@ -91,9 +110,16 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
   );
 
   const clearCurrentSlot = useCallback(() => {
-    if (stepIdx === 0) setFrontImage(null);
-    else if (stepIdx === 1) setLeftImage(null);
-    else setRightImage(null);
+    if (stepIdx === 0) {
+      setFrontImage(null);
+      setFrontPreview(null);
+    } else if (stepIdx === 1) {
+      setLeftImage(null);
+      setLeftPreview(null);
+    } else {
+      setRightImage(null);
+      setRightPreview(null);
+    }
   }, [stepIdx]);
 
   const handleStart = () => {
@@ -111,12 +137,17 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
     setFrontImage(null);
     setLeftImage(null);
     setRightImage(null);
+    setFrontPreview(null);
+    setLeftPreview(null);
+    setRightPreview(null);
     setMsg(null);
     onFrontImageChange?.(null);
   };
 
   const committedForStep =
     stepIdx === 0 ? frontImage : stepIdx === 1 ? leftImage : rightImage;
+  const previewForStep =
+    stepIdx === 0 ? frontPreview : stepIdx === 1 ? leftPreview : rightPreview;
 
   const hasFront = !!frontImage;
   const hasLeft = !!leftImage;
@@ -169,9 +200,9 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
       <p className="text-xs text-slate-600 dark:text-zinc-400">{STEPS_VI[stepIdx].hint}</p>
 
       <FaceScanCapture
-        key={`${stepIdx}-${committedForStep ?? "empty"}`}
         onFileReady={onFileReady}
         committedImageUrl={committedForStep}
+        previewSrc={previewForStep}
         onClearCommitted={clearCurrentSlot}
         disabled={disabled || busy}
         showScanLine={busy}
