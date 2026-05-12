@@ -12,6 +12,12 @@ export type UploadSkinImageResult =
   | { ok: true; url: string }
   | { ok: false; error: string };
 
+const ANGLE_MAP = {
+  front: "FRONT",
+  left: "LEFT",
+  right: "RIGHT",
+} as const;
+
 /**
  * Upload ảnh nhật ký da lên Vercel Blob (public URL).
  * Cần `BLOB_READ_WRITE_TOKEN` trên Vercel / .env.local.
@@ -50,6 +56,12 @@ export async function uploadSkinImageAction(formData: FormData): Promise<UploadS
     return { ok: false, error: "Chỉ chấp nhận JPEG, PNG hoặc WebP." };
   }
 
+  const angleRaw = String(formData.get("angle") ?? "front").toLowerCase();
+  const angle = ANGLE_MAP[angleRaw as keyof typeof ANGLE_MAP];
+  if (!angle) {
+    return { ok: false, error: "Góc ảnh không hợp lệ." };
+  }
+
   const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
   const path = `${prefix}/${userId}/${Date.now()}.${ext}`;
 
@@ -63,10 +75,19 @@ export async function uploadSkinImageAction(formData: FormData): Promise<UploadS
 
     // Lưu URL vào DB ngay sau khi upload để tránh mất URL trên iOS/Safari
     try {
-      await prisma.skinImage.create({
-        data: {
+      await prisma.skinImage.upsert({
+        where: {
+          userId_scope_angle: {
+            userId,
+            scope: prefix,
+            angle,
+          },
+        },
+        update: { url: blob.url },
+        create: {
           userId,
           scope: prefix,
+          angle,
           url: blob.url,
         },
       });

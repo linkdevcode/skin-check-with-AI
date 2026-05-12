@@ -86,6 +86,9 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
     const fd = new FormData();
     fd.append("file", file);
     fd.append("scope", "skin-diary");
+    const idx = stepIdxRef.current;
+    const angle = idx === 0 ? "front" : idx === 1 ? "left" : "right";
+    fd.append("angle", angle);
     const up = await uploadSkinImageAction(fd);
     if (!up.ok) {
       setMsg(up.error);

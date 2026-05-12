@@ -7,6 +7,9 @@ CREATE TYPE "SkinType" AS ENUM ('OILY', 'DRY', 'COMBINATION', 'SENSITIVE');
 -- CreateEnum
 CREATE TYPE "TimeOfDay" AS ENUM ('AM', 'PM');
 
+-- CreateEnum
+CREATE TYPE "ImageAngle" AS ENUM ('FRONT', 'LEFT', 'RIGHT');
+
 -- CreateTable
 CREATE TABLE "users" (
     "id" UUID NOT NULL,
@@ -106,8 +109,10 @@ CREATE TABLE "skin_images" (
     "id" TEXT NOT NULL,
     "user_id" UUID NOT NULL,
     "scope" TEXT NOT NULL,
+    "angle" "ImageAngle" NOT NULL,
     "url" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "skin_images_pkey" PRIMARY KEY ("id")
 );
@@ -139,14 +144,17 @@ CREATE INDEX "recommended_routines_user_id_created_at_idx" ON "recommended_routi
 -- CreateIndex
 CREATE INDEX "skin_images_user_id_created_at_idx" ON "skin_images"("user_id", "created_at");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "skin_images_user_id_scope_angle_key" ON "skin_images"("user_id", "scope", "angle");
+
 -- AddForeignKey
 ALTER TABLE "skincare_routines" ADD CONSTRAINT "skincare_routines_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "routine_details" ADD CONSTRAINT "routine_details_routine_id_fkey" FOREIGN KEY ("routine_id") REFERENCES "skincare_routines"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "routine_details" ADD CONSTRAINT "routine_details_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "routine_details" ADD CONSTRAINT "routine_details_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "routine_details" ADD CONSTRAINT "routine_details_routine_id_fkey" FOREIGN KEY ("routine_id") REFERENCES "skincare_routines"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "analysis_history" ADD CONSTRAINT "analysis_history_routine_id_fkey" FOREIGN KEY ("routine_id") REFERENCES "skincare_routines"("id") ON DELETE CASCADE ON UPDATE CASCADE;
