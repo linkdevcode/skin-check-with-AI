@@ -25,6 +25,18 @@ type Props = {
 
 const tapMotion = { scale: 0.9, transition: tweenTap };
 
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Không đọc được file"));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Không đọc được file"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function FaceScanCapture({
   onFileReady,
   committedImageUrl,
@@ -35,9 +47,9 @@ export function FaceScanCapture({
   className,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [blobPreview, setBlobPreview] = useState<string | null>(null);
+  const [base64Preview, setBase64Preview] = useState<string | null>(null);
 
-  const displaySrc = blobPreview ?? committedImageUrl ?? null;
+  const displaySrc = base64Preview ?? committedImageUrl ?? null;
   const canPrev = navArrows?.showLeft ?? false;
   const canNext = navArrows?.showRight ?? false;
   const handlePrev = navArrows?.onPrev ?? (() => {});
@@ -45,24 +57,24 @@ export function FaceScanCapture({
 
   useEffect(() => {
     if (!committedImageUrl) return;
-    setBlobPreview((prev) => {
-      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return null;
-    });
+    setBase64Preview(null);
   }, [committedImageUrl]);
 
   const revokeBlob = () => {
-    if (blobPreview?.startsWith("blob:")) URL.revokeObjectURL(blobPreview);
-    setBlobPreview(null);
+    setBase64Preview(null);
   };
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = "";
     if (!f || disabled) return;
     revokeBlob();
-    const url = URL.createObjectURL(f);
-    setBlobPreview(url);
+    try {
+      const dataUrl = await fileToDataUrl(f);
+      setBase64Preview(dataUrl);
+    } catch {
+      setBase64Preview(null);
+    }
     onFileReady(f);
   };
 
@@ -83,21 +95,20 @@ export function FaceScanCapture({
       <div className="relative mx-auto flex w-full max-w-sm items-center gap-2">
         {/* CỘT TRÁI: nút trước — luôn chiếm 44px, không hiện nếu không có nút */}
         <div className="flex w-11 shrink-0 items-center justify-center">
-          <motion.button
-            type="button"
-            whileTap={tapMotion}
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePrev();
-            }}
-            className={cn(
-              "sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
-              !canPrev && "opacity-45",
-            )}
-            aria-label="Xem bước ảnh trước"
-          >
-            <ChevronLeft className="h-5 w-5" aria-hidden />
-          </motion.button>
+          {canPrev ? (
+            <motion.button
+              type="button"
+              whileTap={tapMotion}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrev();
+              }}
+              className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+              aria-label="Xem bước ảnh trước"
+            >
+              <ChevronLeft className="h-5 w-5" aria-hidden />
+            </motion.button>
+          ) : null}
         </div>
 
         {/* CỘT GIỮA: ảnh tự co flex-1 */}
@@ -136,21 +147,20 @@ export function FaceScanCapture({
 
         {/* CỘT PHẢI: nút tiếp theo — luôn chiếm 44px */}
         <div className="flex w-11 shrink-0 items-center justify-center">
-          <motion.button
-            type="button"
-            whileTap={tapMotion}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleNext();
-            }}
-            className={cn(
-              "sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
-              !canNext && "opacity-45",
-            )}
-            aria-label="Sang bước ảnh tiếp theo"
-          >
-            <ChevronRight className="h-5 w-5" aria-hidden />
-          </motion.button>
+          {canNext ? (
+            <motion.button
+              type="button"
+              whileTap={tapMotion}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNext();
+              }}
+              className="sk-touch-manipulation flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 active:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+              aria-label="Sang bước ảnh tiếp theo"
+            >
+              <ChevronRight className="h-5 w-5" aria-hidden />
+            </motion.button>
+          ) : null}
         </div>
       </div>
 

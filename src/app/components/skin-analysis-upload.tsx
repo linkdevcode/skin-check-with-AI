@@ -120,6 +120,7 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
 
   const hasFront = !!frontImage;
   const hasLeft = !!leftImage;
+  const hasRight = !!rightImage;
   const navArrows: FaceFrameNavArrows = (() => {
     if (stepIdx === 0) {
       return {
@@ -180,8 +181,9 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
 
       <button
         type="button"
+        disabled={!hasFront || !hasLeft || !hasRight}
         onClick={handleStart}
-        className="sk-touch-manipulation w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-violet-500 dark:bg-violet-500 dark:hover:bg-violet-400"
+        className="sk-touch-manipulation w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-md hover:bg-violet-500 disabled:opacity-50 dark:bg-violet-500 dark:hover:bg-violet-400"
       >
         Bắt đầu phân tích
       </button>
