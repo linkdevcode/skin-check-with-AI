@@ -1,6 +1,3 @@
-// SkinCheck AI — Vercel Postgres
-// https://www.prisma.io/docs/concepts/database-connectors/postgresql
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,42 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- Enums ---
-
-enum SkinType {
-  OILY       // Dầu
-  DRY        // Khô
-  COMBINATION // Hỗn hợp
-  SENSITIVE  // Nhạy cảm
-}
-
-/// Sáng / Tối
-enum TimeOfDay {
-  AM
-  PM
-}
-
-// --- Models ---
-
 /// Người dùng — cá nhân hóa phân tích + đăng nhập email
 model User {
-  id              String   @id @default(uuid()) @db.Uuid
+  id                  String               @id @default(uuid()) @db.Uuid
   /// Email đăng nhập (chuẩn hóa lowercase), null = legacy / tài khoản cũ không auth
-  email           String?  @unique @map("email")
-  passwordHash    String?  @map("password_hash")
-  resetToken      String?  @map("reset_token")
-  resetTokenExpiry DateTime? @map("reset_token_expiry")
-  name            String
-  skinType        SkinType @map("skin_type")
+  email               String?              @unique @map("email")
+  passwordHash        String?              @map("password_hash")
+  resetToken          String?              @map("reset_token")
+  resetTokenExpiry    DateTime?            @map("reset_token_expiry")
+  name                String
+  skinType            SkinType             @map("skin_type")
   /// Ví dụ: "Mụn, lão hóa, thâm nám" (chuỗi tự do hoặc CSV tùy client)
-  skinConcerns    String   @map("skin_concerns")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  routines SkincareRoutine[]
-  skinEntries SkinEntry[]
+  skinConcerns        String               @map("skin_concerns")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
   recommendedRoutines RecommendedRoutine[]
-  skinImages SkinImage[]
+  skinEntries         SkinEntry[]
+  skinImages          SkinImage[]
+  routines            SkincareRoutine[]
 
   @@index([resetToken])
   @@map("users")
@@ -53,15 +32,14 @@ model User {
 
 /// Thư viện sản phẩm (cache INCI / hoạt chất)
 model Product {
-  id              String @id @default(uuid()) @db.Uuid
-  brandName       String @map("brand_name")
-  productName     String @map("product_name")
-  ingredientsList String @db.Text @map("ingredients_list")
-  isVerified      Boolean @default(false) @map("is_verified")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  routineDetails RoutineDetail[]
+  id              String          @id @default(uuid()) @db.Uuid
+  brandName       String          @map("brand_name")
+  productName     String          @map("product_name")
+  ingredientsList String          @map("ingredients_list")
+  isVerified      Boolean         @default(false) @map("is_verified")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  routineDetails  RoutineDetail[]
 
   @@index([brandName, productName])
   @@map("products")
@@ -69,16 +47,15 @@ model Product {
 
 /// Routine gắn với user
 model SkincareRoutine {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  routineName String   @map("routine_name")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  details RoutineDetail[]
-  analyses AnalysisHistory[]
+  id          String            @id @default(uuid()) @db.Uuid
+  userId      String            @map("user_id") @db.Uuid
+  routineName String            @map("routine_name")
+  isActive    Boolean           @default(true) @map("is_active")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  analyses    AnalysisHistory[]
+  details     RoutineDetail[]
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("skincare_routines")
@@ -86,14 +63,13 @@ model SkincareRoutine {
 
 /// Từng bước trong routine: sản phẩm, buổi, thứ tự layering
 model RoutineDetail {
-  id          String     @id @default(uuid()) @db.Uuid
-  routineId   String     @map("routine_id") @db.Uuid
-  productId   String?    @map("product_id") @db.Uuid
-  timeOfDay   TimeOfDay  @map("time_of_day")
-  orderIndex  Int        @map("order_index")
-
-  routine SkincareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  id         String          @id @default(uuid()) @db.Uuid
+  routineId  String          @map("routine_id") @db.Uuid
+  productId  String?         @map("product_id") @db.Uuid
+  timeOfDay  TimeOfDay       @map("time_of_day")
+  orderIndex Int             @map("order_index")
+  product    Product?        @relation(fields: [productId], references: [id])
+  routine    SkincareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
 
   @@index([routineId, timeOfDay, orderIndex])
   @@map("routine_details")
@@ -101,15 +77,14 @@ model RoutineDetail {
 
 /// Lịch sử chấm điểm AI — tránh gọi lại token
 model AnalysisHistory {
-  id                 String   @id @default(uuid()) @db.Uuid
-  routineId          String   @map("routine_id") @db.Uuid
-  overallScore       Int      @map("overall_score") // 0–100 (validate ở app)
+  id                String          @id @default(uuid()) @db.Uuid
+  routineId         String          @map("routine_id") @db.Uuid
+  overallScore      Int             @map("overall_score")
   /// JSON: ví dụ [{"pair":"Retinol-AHA","level":"high"}]
-  conflicts          Json     @default("[]")
-  aiRecommendations  String   @db.Text @map("ai_recommendations")
-  createdAt          DateTime @default(now()) @map("created_at")
-
-  routine SkincareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  conflicts         Json            @default("[]")
+  aiRecommendations String          @map("ai_recommendations")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  routine           SkincareRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
 
   @@index([routineId, createdAt])
   @@map("analysis_history")
@@ -117,16 +92,15 @@ model AnalysisHistory {
 
 /// Nhật ký da — ảnh Blob (trước bắt buộc; trái/phải tuỳ chọn) + phân tích JSON (Vision)
 model SkinEntry {
-  id              String   @id @default(cuid())
-  userId          String   @map("user_id") @db.Uuid
-  imageUrlFront   String   @map("image_url_front")
-  imageUrlLeft    String?  @map("image_url_left")
-  imageUrlRight   String?  @map("image_url_right")
-  analysisResult  Json     @map("analysis_result")
-  userNote        String?  @map("user_note")
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id") @db.Uuid
+  imageUrlFront  String   @map("image_url_front")
+  imageUrlLeft   String?  @map("image_url_left")
+  imageUrlRight  String?  @map("image_url_right")
+  analysisResult Json     @map("analysis_result")
+  userNote       String?  @map("user_note")
+  createdAt      DateTime @default(now()) @map("created_at")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@map("skin_entries")
@@ -134,21 +108,20 @@ model SkinEntry {
 
 /// Gợi ý routine theo ngân sách sau phân tích ảnh da (Gemini Vision + text)
 model RecommendedRoutine {
-  id              String   @id @default(cuid())
-  userId          String   @map("user_id") @db.Uuid
-  imageUrlFront   String   @map("image_url_front")
-  imageUrlLeft    String   @map("image_url_left")
-  imageUrlRight   String   @map("image_url_right")
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id") @db.Uuid
+  imageUrlFront String   @map("image_url_front")
+  imageUrlLeft  String   @map("image_url_left")
+  imageUrlRight String   @map("image_url_right")
   /// JSON: loại da, điểm số, mô tả mụn/lỗ chân lông…
-  faceAnalysis   Json     @map("face_analysis")
+  faceAnalysis  Json     @map("face_analysis")
   /// JSON: gói BUDGET hoặc 3 tầng TIET_KIEM / HIEU_QUA / CAO_CAP
-  routineResult  Json     @map("routine_result")
+  routineResult Json     @map("routine_result")
   /// "BUDGET" | "AUTO"
-  mode           String   @map("mode")
-  budgetVnd      Int?     @map("budget_vnd")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mode          String   @map("mode")
+  budgetVnd     Int?     @map("budget_vnd")
+  createdAt     DateTime @default(now()) @map("created_at")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@map("recommended_routines")
@@ -161,9 +134,21 @@ model SkinImage {
   scope     String
   url       String
   createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@map("skin_images")
+}
+
+enum SkinType {
+  OILY
+  DRY
+  COMBINATION
+  SENSITIVE
+}
+
+/// Sáng / Tối
+enum TimeOfDay {
+  AM
+  PM
 }
