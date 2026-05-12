@@ -136,15 +136,22 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
 
   const handleStart = async () => {
     let frontUrl = frontImage;
+    const needsUploadFront = !frontUrl && frontFile;
+    if (needsUploadFront) setBusy(true);
+
     if (!frontUrl && frontFile) {
       const uploaded = await uploadFile(frontFile);
-      if (uploaded) {
-        setFrontImage(uploaded);
-        frontUrl = uploaded;
+      if (!uploaded) {
+        setMsg("Tải ảnh thất bại, thử lại.");
+        if (needsUploadFront) setBusy(false);
+        return;
       }
+      setFrontImage(uploaded);
+      frontUrl = uploaded;
     }
     if (!frontUrl?.trim()) {
       setMsg("Cần chụp ảnh mặt trước để tiếp tục.");
+      if (needsUploadFront) setBusy(false);
       return;
     }
     setMsg(null);
@@ -153,6 +160,7 @@ export const SkinDiaryUpload = memo(function SkinDiaryUpload({
       left: leftImage?.trim() || null,
       right: rightImage?.trim() || null,
     });
+    if (needsUploadFront) setBusy(false);
   };
 
   const reset = () => {

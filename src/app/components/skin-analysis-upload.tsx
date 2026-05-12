@@ -136,16 +136,21 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
   }, [stepIdx]);
 
   const handleStart = async () => {
-    setBusy(true);
     let frontUrl = frontImage;
     let leftUrl = leftImage;
     let rightUrl = rightImage;
+
+    const needsUploadFront = !frontUrl && frontFile;
+    const needsUploadLeft = !leftUrl && leftFile;
+    const needsUploadRight = !rightUrl && rightFile;
+    const willUpload = needsUploadFront || needsUploadLeft || needsUploadRight;
+    if (willUpload) setBusy(true);
 
     if (!frontUrl && frontFile) {
       const uploaded = await uploadFile(frontFile);
       if (!uploaded) {
         setMsg("Tải ảnh thất bại, thử lại.");
-        setBusy(false);
+        if (willUpload) setBusy(false);
         return;
       }
       setFrontImage(uploaded);
@@ -155,7 +160,7 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
       const uploaded = await uploadFile(leftFile);
       if (!uploaded) {
         setMsg("Tải ảnh thất bại, thử lại.");
-        setBusy(false);
+        if (willUpload) setBusy(false);
         return;
       }
       setLeftImage(uploaded);
@@ -165,7 +170,7 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
       const uploaded = await uploadFile(rightFile);
       if (!uploaded) {
         setMsg("Tải ảnh thất bại, thử lại.");
-        setBusy(false);
+        if (willUpload) setBusy(false);
         return;
       }
       setRightImage(uploaded);
@@ -174,17 +179,17 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
 
     if (!frontUrl?.trim()) {
       setMsg(FRONT_REQUIRED_MSG);
-      setBusy(false);
+      if (willUpload) setBusy(false);
       return;
     }
     if (!leftUrl || !rightUrl) {
       setMsg("Cần đủ 3 ảnh (mặt trước, trái, phải).");
-      setBusy(false);
+      if (willUpload) setBusy(false);
       return;
     }
     setMsg(null);
     onCompleteRef.current({ front: frontUrl, left: leftUrl, right: rightUrl });
-    setBusy(false);
+    if (willUpload) setBusy(false);
   };
 
   const reset = () => {
