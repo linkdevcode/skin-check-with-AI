@@ -144,8 +144,8 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
     if (!frontUrl && frontFile) {
       const uploaded = await uploadFile(frontFile);
       if (!uploaded) {
+        setMsg("Tải ảnh thất bại, thử lại.");
         setBusy(false);
-        setMsg("Tải ảnh mặt trước thất bại. Kiểm tra mạng và thử lại.");
         return;
       }
       setFrontImage(uploaded);
@@ -154,8 +154,8 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
     if (!leftUrl && leftFile) {
       const uploaded = await uploadFile(leftFile);
       if (!uploaded) {
+        setMsg("Tải ảnh thất bại, thử lại.");
         setBusy(false);
-        setMsg("Tải ảnh góc trái thất bại. Kiểm tra mạng và thử lại.");
         return;
       }
       setLeftImage(uploaded);
@@ -164,8 +164,8 @@ export const SkinAnalysisUpload = memo(function SkinAnalysisUpload({
     if (!rightUrl && rightFile) {
       const uploaded = await uploadFile(rightFile);
       if (!uploaded) {
+        setMsg("Tải ảnh thất bại, thử lại.");
         setBusy(false);
-        setMsg("Tải ảnh góc phải thất bại. Kiểm tra mạng và thử lại.");
         return;
       }
       setRightImage(uploaded);
